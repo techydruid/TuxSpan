@@ -26,5 +26,4 @@ TuxSpan reduces risk by:
 
 ## Reporting
 
-Until a public repository and security address exist, do not describe this alpha as accepting confidential vulnerability reports. Add a monitored private security contact before publishing a stable release.
-
+Report vulnerabilities privately through GitHub's security-advisory flow for `techydruid/TuxSpan`. Do not open a public issue for a vulnerability that could put users at risk.

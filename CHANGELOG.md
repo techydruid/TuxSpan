@@ -2,6 +2,7 @@
 
 ## 0.20.0 — 2026-09-02
 
+- Publish the first production-signed APK with standard release naming and a dedicated long-term signing identity.
 - Prevent duplicate desktop launchers during slow cold starts and make workspace status responses workspace-specific.
 - Route Spark reconnects back to Termux instead of an unused X11 display.
 - Use recovery-resistant LibreOffice launchers as the document defaults.

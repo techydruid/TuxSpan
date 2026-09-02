@@ -6,13 +6,13 @@ TuxSpan turns a compatible Android 8+ phone or tablet into a portable Linux work
 
 TuxSpan is an original native Android project. Its product language, interface, Kotlin code, recipe model, device-fit system, and visual identity were created independently. It does not bundle or modify another project's APK, bootstrap, native libraries, artwork, or source code.
 
-> **Project status:** functional alpha. Version 0.20.0 focuses on resilient setup, launch, reconnect, restart, and workspace switching; clearer recovery guidance; phone-friendly desktop scaling; and a cleaner mobile interface. It provides a complete lightweight everyday Starter desktop, optional Creator and Developer packs, Firefox ESR as Canvas's default browser, trusted full-label desktop shortcuts, unclipped HDPI window titles, a centered floating taskbar, a high-visibility pointer, and touchpad, direct-touch, software-keyboard, compact, portrait, and external keyboard/mouse options. It has been exercised on a physical OnePlus 10T, but still needs testing across a representative device matrix before a stable release.
+> **Project status:** early public release. Version 0.20.0 focuses on resilient setup, launch, reconnect, restart, and workspace switching; clearer recovery guidance; phone-friendly desktop scaling; and a cleaner mobile interface. It provides a complete lightweight everyday Starter desktop, optional Creator and Developer packs, Firefox ESR as Canvas's default browser, trusted full-label desktop shortcuts, unclipped HDPI window titles, a centered floating taskbar, a high-visibility pointer, and touchpad, direct-touch, software-keyboard, compact, portrait, and external keyboard/mouse options. It has been exercised on a physical OnePlus 10T, but still needs testing across a representative device matrix before a 1.0 release.
 
 ## Download
 
-[Download TuxSpan 0.20.0 Alpha](https://github.com/techydruid/TuxSpan/releases/tag/v0.20.0)
+[Download the latest TuxSpan release](https://github.com/techydruid/TuxSpan/releases/latest)
 
-The current public alpha is a debug-signed evaluation build. Android may warn about sideloading, and it cannot be upgraded by a future production-signed build without uninstalling it first. Verify the checksum shown in the matching GitHub release before installing.
+Official APKs are production-signed with TuxSpan's dedicated release certificate. Download updates only from this repository and verify the checksum shown in the matching GitHub release before installing.
 
 ## Why TuxSpan is different
 
@@ -78,11 +78,12 @@ Requirements:
 - Android SDK Build Tools 36.0.0 or newer
 
 ```bash
-./gradlew test
-./gradlew assembleDebug
+./gradlew test lint assembleDebug
 ```
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
+
+Production builds read signing material from `TUXSPAN_KEYSTORE_PATH`, `TUXSPAN_KEYSTORE_PASSWORD`, `TUXSPAN_KEY_ALIAS`, and `TUXSPAN_KEY_PASSWORD`. Never commit a keystore or its credentials. With those variables configured, run `./gradlew assembleRelease`; the signed APK is written to `app/build/outputs/apk/release/app-release.apk`.
 
 ## Architecture
 
