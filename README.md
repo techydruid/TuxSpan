@@ -2,6 +2,11 @@
 
 **A brand-neutral Linux workspace launcher for Android.**
 
+[![Latest release](https://img.shields.io/github/v/release/techydruid/TuxSpan?label=release)](https://github.com/techydruid/TuxSpan/releases/latest)
+[![Android CI](https://github.com/techydruid/TuxSpan/actions/workflows/android.yml/badge.svg)](https://github.com/techydruid/TuxSpan/actions/workflows/android.yml)
+[![Android 8+](https://img.shields.io/badge/Android-8%2B-3DDC84?logo=android&logoColor=white)](docs/COMPATIBILITY.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 TuxSpan turns a compatible Android 8+ phone or tablet into a portable Linux workspace without root. It inspects the device, recommends a workload, shows the exact setup recipe, and launches that recipe through Termux's user-approved command API. Desktop blueprints render through the separately installed Termux:X11 app; lightweight devices can use a terminal-only blueprint.
 
 TuxSpan is an original native Android project. Its product language, interface, Kotlin code, recipe model, device-fit system, and visual identity were created independently. It does not bundle or modify another project's APK, bootstrap, native libraries, artwork, or source code.
@@ -13,6 +18,21 @@ TuxSpan provides guided installation, reliable workspace controls, device-aware 
 [Download the latest TuxSpan release](https://github.com/techydruid/TuxSpan/releases/latest)
 
 Official APKs are production-signed with TuxSpan's dedicated release certificate. Download updates only from this repository and verify the checksum shown in the matching GitHub release before installing.
+
+New to Termux? Follow the [beginner installation guide](docs/INSTALLATION.md). It includes the correct companion downloads, the one-time consent command, storage access, and first-launch instructions.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/tuxspan-home.png" alt="TuxSpan home and workspace controls" width="320"><br><sub>Home and workspace controls</sub></td>
+    <td align="center"><img src="docs/images/tuxspan-workspaces.png" alt="TuxSpan workspace plans" width="320"><br><sub>Canvas, Studio and Spark plans</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/canvas-desktop.png" alt="Canvas Debian desktop" width="480"><br><sub>Canvas desktop</sub></td>
+    <td align="center"><img src="docs/images/studio-desktop.png" alt="Studio Ubuntu desktop" width="480"><br><sub>Studio desktop</sub></td>
+  </tr>
+</table>
 
 ## Why TuxSpan is different
 
@@ -48,12 +68,14 @@ Starter shortcuts stay uncluttered at the desktop level: Firefox, Writer, Photos
 
 ## Runtime requirements
 
-1. [Termux from F-Droid](https://f-droid.org/packages/com.termux/) for every blueprint.
+1. [Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) for every blueprint.
 2. [Termux:X11 nightly](https://github.com/termux/termux-x11/releases/tag/nightly) for Canvas and Studio.
 3. TuxSpan's **Run commands in Termux environment** permission.
 4. Termux's separate `allow-external-apps=true` consent switch.
 
 TuxSpan explains and links each requirement inside the app. Do not mix Termux and plugin APKs signed by different distribution sources.
+
+When using the recommended F-Droid Termux build, choose **`termux-x11-universal-debug.apk`** from the Termux:X11 nightly assets. Do not choose the `sharedUid` variant; it is for a differently signed Termux build. See [Installation](docs/INSTALLATION.md) for the complete setup.
 
 ## User flow
 
@@ -101,6 +123,17 @@ TuxSpan Compose UI
 ```
 
 More detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Documentation
+
+- [Installation](docs/INSTALLATION.md) — beginner-friendly download and setup instructions
+- [Troubleshooting](docs/TROUBLESHOOTING.md) — setup, launch, display, keyboard and storage help
+- [Compatibility](docs/COMPATIBILITY.md) — device requirements and expected experience
+- [Architecture](docs/ARCHITECTURE.md) — project components and trust boundaries
+- [Verification](VERIFICATION.md) — release identity and APK verification
+- [Security policy](SECURITY.md) — safe reporting and security notes
+- [Contributing](CONTRIBUTING.md) — development workflow and contribution guidelines
+- [Changelog](CHANGELOG.md) — version history
 
 ## Security and privacy
 

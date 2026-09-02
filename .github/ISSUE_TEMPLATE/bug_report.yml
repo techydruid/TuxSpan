@@ -1,0 +1,88 @@
+name: Bug report
+description: Report a reproducible TuxSpan setup, launch, display, input, or storage problem.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve TuxSpan. Please read the [troubleshooting guide](https://github.com/techydruid/TuxSpan/blob/main/docs/TROUBLESHOOTING.md) first and remove private information from logs.
+  - type: input
+    id: version
+    attributes:
+      label: TuxSpan version
+      placeholder: 0.20.0
+    validations:
+      required: true
+  - type: dropdown
+    id: workspace
+    attributes:
+      label: Workspace
+      options:
+        - Canvas
+        - Studio
+        - Spark
+        - App interface / not workspace-specific
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the visible problem and the exact error message.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: device
+    attributes:
+      label: Device information
+      description: Phone model, Android version, CPU architecture, RAM, and approximate free storage.
+      placeholder: OnePlus 10T, Android 16, arm64, 8 GB RAM, 20 GB free
+    validations:
+      required: true
+  - type: textarea
+    id: companions
+    attributes:
+      label: Companion versions and sources
+      description: Include the Termux source/version and Termux:X11 version. State whether Termux was installed from F-Droid.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized diagnostic log
+      description: Paste relevant TuxSpan log lines. Remove private paths, usernames, tokens, IP addresses, and personal data.
+      render: shell
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or video
+      description: Drag files here if they make the issue clearer.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I installed Termux and Termux:X11 from compatible sources.
+          required: true
+        - label: I checked the troubleshooting guide and can reproduce this problem.
+          required: true
+        - label: I removed secrets and personal information from this report.
+          required: true

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Installation guide
+    url: https://github.com/techydruid/TuxSpan/blob/main/docs/INSTALLATION.md
+    about: Start here if you are installing TuxSpan or its companion apps.
+  - name: Troubleshooting guide
+    url: https://github.com/techydruid/TuxSpan/blob/main/docs/TROUBLESHOOTING.md
+    about: Check common setup, launch, display, keyboard, and storage fixes.
+  - name: Security report
+    url: https://github.com/techydruid/TuxSpan/security/policy
+    about: Report security vulnerabilities privately instead of opening a public issue.
