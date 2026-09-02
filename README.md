@@ -10,7 +10,7 @@ TuxSpan is an original native Android project. Its product language, interface, 
 
 ## Download
 
-[Download the latest TuxSpan APK](https://github.com/techydruid/TuxSpan/releases/latest)
+[Download TuxSpan 0.20.0 Alpha](https://github.com/techydruid/TuxSpan/releases/tag/v0.20.0)
 
 The current public alpha is a debug-signed evaluation build. Android may warn about sideloading, and it cannot be upgraded by a future production-signed build without uninstalling it first. Verify the checksum shown in the matching GitHub release before installing.
 
