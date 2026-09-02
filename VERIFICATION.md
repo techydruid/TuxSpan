@@ -23,4 +23,4 @@ Result:
 - Release APK SHA-256: `B5CBCDC0E4D32A2580685A41404607A48C3B4E18FAE1CF0411E5C6281A8D212B`
 - Signing certificate SHA-256: `4764899DEC5E840DF9A8E814DD09732255E7B312129990DEA164B4C0329C6D6C`
 
-The public APK is signed with a dedicated TuxSpan release key. The keystore and passwords are stored outside the repository and must be backed up securely; losing them prevents Android from accepting future updates under the same application identity. Broader physical-device testing is still required before a 1.0 release.
+The public APK is signed with a dedicated TuxSpan release key. The keystore and passwords are stored outside the repository and must be backed up securely; losing them prevents Android from accepting future updates under the same application identity. Android vendor behavior and available hardware resources can affect compatibility, so device-specific problems should be reported through the repository.

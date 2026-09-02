@@ -7,7 +7,7 @@
 - Route Spark reconnects back to Termux instead of an unused X11 display.
 - Use recovery-resistant LibreOffice launchers as the document defaults.
 - Replace File Roller with Xarchiver after real-device testing found an ARM `Illegal instruction` crash in Ubuntu.
-- Replace the OnePlus-conflicting three-finger help instruction with the reliable Settings control.
+- Replace the manufacturer-conflicting three-finger help instruction with a reliable Settings control.
 
 ## 0.9.0 — 2026-09-01
 
@@ -135,7 +135,7 @@
 
 - Hide the Termux:X11 extra-keys panel through its live `ACTION_CUSTOM` control path.
 - Work around Termux:X11 1.03.01 persisting `additionalKbdVisible=false` without refreshing the active toolbar.
-- Validate the show-then-toggle sequence against a connected OnePlus 10T running Termux:X11 1.03.01-6d3c688.
+- Validate the show-then-toggle sequence against Termux:X11 on physical Android hardware.
 - Make the Workbench Show/Hide controls actions verify their final persisted state.
 
 ## 0.4.1 — 2026-09-01

@@ -6,7 +6,7 @@ TuxSpan turns a compatible Android 8+ phone or tablet into a portable Linux work
 
 TuxSpan is an original native Android project. Its product language, interface, Kotlin code, recipe model, device-fit system, and visual identity were created independently. It does not bundle or modify another project's APK, bootstrap, native libraries, artwork, or source code.
 
-> **Project status:** early public release. Version 0.20.0 focuses on resilient setup, launch, reconnect, restart, and workspace switching; clearer recovery guidance; phone-friendly desktop scaling; and a cleaner mobile interface. It provides a complete lightweight everyday Starter desktop, optional Creator and Developer packs, Firefox ESR as Canvas's default browser, trusted full-label desktop shortcuts, unclipped HDPI window titles, a centered floating taskbar, a high-visibility pointer, and touchpad, direct-touch, software-keyboard, compact, portrait, and external keyboard/mouse options. It has been exercised on a physical OnePlus 10T, but still needs testing across a representative device matrix before a 1.0 release.
+TuxSpan provides guided installation, reliable workspace controls, device-aware recommendations, and a mobile-friendly Linux desktop experience. It supports touchpad and direct-touch input, software and physical keyboards, portrait and landscape layouts, Android file access, and optional application packs for everyday, creative, and development work.
 
 ## Download
 
