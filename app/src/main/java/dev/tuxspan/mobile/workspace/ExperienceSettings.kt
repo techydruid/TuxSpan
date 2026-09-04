@@ -5,8 +5,8 @@ import androidx.core.content.edit
 import kotlin.math.roundToInt
 
 enum class DisplayProfile(val label: String, val description: String) {
-    MOBILE("Mobile", "Larger text and controls with an auto-hiding XFCE panel"),
-    DESKTOP("Desktop", "More workspace for a keyboard, mouse, or external display"),
+    MOBILE("Mobile", "Larger text and controls with a clean bottom dock"),
+    DESKTOP("Desktop", "More workspace with a compact bottom dock"),
     ;
 
     fun adaptiveDpi(androidDensityDpi: Int): Int = when (this) {
@@ -20,11 +20,6 @@ enum class DisplayProfile(val label: String, val description: String) {
             DESKTOP -> 24
         }
 
-    val panelAutoHideBehavior: Int
-        get() = when (this) {
-            MOBILE -> 2
-            DESKTOP -> 0
-        }
 }
 
 enum class ScreenOrientation(val label: String, val x11Value: String) {
@@ -55,6 +50,8 @@ data class ExperienceSettings(
     val performancePreset: PerformancePreset = PerformancePreset.BALANCED,
     val downloadsBridgeEnabled: Boolean = false,
     val tutorialCompleted: Boolean = false,
+    val termuxConsentCompleted: Boolean = false,
+    val initialSetupCompleted: Boolean = false,
 )
 
 class ExperienceRepository(context: Context) {
@@ -68,6 +65,8 @@ class ExperienceRepository(context: Context) {
             performancePreset = enumValue(KEY_PERFORMANCE, PerformancePreset.BALANCED),
             downloadsBridgeEnabled = preferences.getBoolean(KEY_DOWNLOADS, false),
             tutorialCompleted = preferences.getBoolean(KEY_TUTORIAL, false),
+            termuxConsentCompleted = preferences.getBoolean(KEY_TERMUX_CONSENT, false),
+            initialSetupCompleted = preferences.getBoolean(KEY_INITIAL_SETUP, false),
         )
         if (preferences.getInt(KEY_SETTINGS_VERSION, 0) >= CURRENT_SETTINGS_VERSION) return saved
 
@@ -86,6 +85,8 @@ class ExperienceRepository(context: Context) {
             putString(KEY_PERFORMANCE, settings.performancePreset.name)
             putBoolean(KEY_DOWNLOADS, settings.downloadsBridgeEnabled)
             putBoolean(KEY_TUTORIAL, settings.tutorialCompleted)
+            putBoolean(KEY_TERMUX_CONSENT, settings.termuxConsentCompleted)
+            putBoolean(KEY_INITIAL_SETUP, settings.initialSetupCompleted)
             putInt(KEY_SETTINGS_VERSION, CURRENT_SETTINGS_VERSION)
         }
     }
@@ -102,7 +103,9 @@ class ExperienceRepository(context: Context) {
         const val KEY_PERFORMANCE = "performance_preset"
         const val KEY_DOWNLOADS = "downloads_bridge"
         const val KEY_TUTORIAL = "tutorial_completed"
+        const val KEY_TERMUX_CONSENT = "termux_consent_completed"
+        const val KEY_INITIAL_SETUP = "initial_setup_completed"
         const val KEY_SETTINGS_VERSION = "settings_version"
-        const val CURRENT_SETTINGS_VERSION = 3
+        const val CURRENT_SETTINGS_VERSION = 4
     }
 }

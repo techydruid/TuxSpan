@@ -146,6 +146,28 @@ fun TuxSpanRoot(viewModel: MainViewModel = viewModel()) {
                                 onShowGuide = viewModel::showTutorial,
                                 onInstallBundle = viewModel::installBundle,
                                 onRemove = { showRemoveConfirmation = true },
+                                onDownloadTermux = {
+                                    CompanionInspector.openUrl(
+                                        context,
+                                        CompanionInspector.TERMUX_URL,
+                                    )
+                                },
+                                onDownloadX11 = {
+                                    CompanionInspector.openUrl(
+                                        context,
+                                        CompanionInspector.X11_URL,
+                                    )
+                                },
+                                onGrantPermission = {
+                                    permissionLauncher.launch(CompanionInspector.RUN_COMMAND_PERMISSION)
+                                },
+                                onCopyOptIn = { copyOptInCommand(context) },
+                                onOpenTermux = viewModel::openTermux,
+                                onVerifyConsent = viewModel::verifyTermuxConsent,
+                                onCompleteInitialSetup = {
+                                    viewModel.completeInitialSetup()
+                                    if (state.coreSetupReady) page = AppPage.BLUEPRINTS
+                                },
                             )
 
                             AppPage.BLUEPRINTS -> BlueprintsScreen(
@@ -221,6 +243,7 @@ fun TuxSpanRoot(viewModel: MainViewModel = viewModel()) {
                     },
                     onOpenTermux = viewModel::openTermux,
                     onCopyOptIn = { copyOptInCommand(context) },
+                    onVerifyTermuxConsent = viewModel::verifyTermuxConsent,
                     onCopyManualSetup = {
                         copyCommand(
                             context = context,
@@ -281,6 +304,7 @@ fun TuxSpanRoot(viewModel: MainViewModel = viewModel()) {
 private fun copyOptInCommand(context: Context) {
     val command = "mkdir -p ~/.termux && printf '\\nallow-external-apps=true\\n' >> ~/.termux/termux.properties && termux-reload-settings"
     copyCommand(context, "TuxSpan Termux opt-in", command)
+    Toast.makeText(context, "Termux consent command copied.", Toast.LENGTH_SHORT).show()
 }
 
 private fun copyCommand(context: Context, label: String, command: String) {

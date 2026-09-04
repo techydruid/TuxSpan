@@ -16,10 +16,8 @@ class WorkspaceScriptsTest {
         assertEquals(DisplayProfile.MOBILE, settings.displayProfile)
         assertEquals(192, settings.displayProfile.adaptiveDpi(480))
         assertEquals(48, settings.displayProfile.cursorSize)
-        assertEquals(2, settings.displayProfile.panelAutoHideBehavior)
         assertEquals(144, DisplayProfile.DESKTOP.adaptiveDpi(480))
         assertEquals(24, DisplayProfile.DESKTOP.cursorSize)
-        assertEquals(0, DisplayProfile.DESKTOP.panelAutoHideBehavior)
     }
 
     @Test
@@ -34,14 +32,9 @@ class WorkspaceScriptsTest {
         assertTrue(profile.contains("rm -rf \"${'$'}HOME/Desktop/Launcher trust FAIL\""))
         assertTrue(profile.contains("/general/theme string 'Default-hdpi'"))
         assertTrue(profile.contains("/general/title_font string 'Sans Bold 12'"))
-        assertTrue(profile.contains("plugin_type=${'$'}(xfconf-query"))
-        assertTrue(profile.contains("pager)"))
-        assertTrue(profile.contains("actions)"))
-        assertTrue(profile.contains("-t string -s '+logout-dialog'"))
-        assertTrue(profile.contains("${'$'}plugin_path/appearance\" uint '0'"))
-        assertTrue(profile.contains("${'$'}plugin_path/ask-confirmation\" bool 'true'"))
-        assertFalse(profile.contains("-s '+shutdown'"))
-        assertFalse(profile.contains("-s '+restart'"))
+        assertTrue(profile.contains("/panels -n -a -t int -s 2"))
+        assertTrue(profile.contains("/panels/panel-1 -r -R"))
+        assertFalse(profile.contains("/panels/panel-1/autohide-behavior"))
         assertTrue(profile.contains("/panels/panel-2/autohide-behavior uint '0'"))
         assertTrue(profile.contains("/panels/panel-2/position string 'p=10;x=0;y=0'"))
         assertTrue(profile.contains("/panels/panel-2/enable-struts bool 'false'"))
@@ -299,7 +292,7 @@ class WorkspaceScriptsTest {
     }
 
     @Test
-    fun trackedInstallCapturesLogsAndReturnsCompactMarker() {
+    fun trackedInstallStreamsVisibleOutputAndCapturesTheSameLog() {
         val script = WorkspaceScripts.trackedInstall(WorkspaceCatalog.canvas)
 
         assertTrue(script.contains("canvas.status"))
@@ -312,6 +305,12 @@ class WorkspaceScriptsTest {
         assertTrue(script.contains("canvas-launch.log"))
         assertTrue(script.contains("tail -n 30"))
         assertTrue(script.contains("TuxSpan is preparing"))
+        assertTrue(script.contains("tuxspan_run_with_estimated_progress"))
+        assertTrue(script.contains("58 92 6 7"))
+        assertTrue(script.contains("progress_value=${'$'}((progress_value + 1))"))
+        assertTrue(script.contains("wait \"${'$'}progress_command_pid\""))
+        assertTrue(script.contains("2>&1 | tee -a \"${'$'}log_file\""))
+        assertTrue(script.contains("exit_code=${'$'}{PIPESTATUS[0]}"))
         assertFalse(script.contains("here-document"))
         assertFalse(script.contains("TUXSPAN_LAUNCHER"))
     }
@@ -428,6 +427,7 @@ class WorkspaceScriptsTest {
         val command = WorkspaceScripts.requestStorageAccess()
 
         assertTrue(command.contains("command -v termux-setup-storage"))
+        assertTrue(command.indexOf("sleep 2") < command.indexOf("termux-setup-storage\n"))
         assertTrue(command.contains("printf 'y\\n' | termux-setup-storage"))
         assertTrue(command.contains("TUXSPAN_STORAGE_REQUESTED"))
     }

@@ -1,5 +1,6 @@
 package dev.tuxspan.mobile.ui
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,11 +23,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import dev.tuxspan.mobile.ui.theme.Lime
 import dev.tuxspan.mobile.workspace.InstallProgress
 import dev.tuxspan.mobile.workspace.InstallProgressStatus
@@ -136,6 +143,8 @@ fun InstallProgressPanel(
     modifier: Modifier = Modifier,
 ) {
     val failed = progress.status == InstallProgressStatus.FAILED
+    val running = progress.status == InstallProgressStatus.RUNNING ||
+        progress.status == InstallProgressStatus.UNKNOWN
     val accent = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
     val supportingColor = if (failed) {
         MaterialTheme.colorScheme.onErrorContainer
@@ -183,6 +192,60 @@ fun InstallProgressPanel(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
+            } else if (running) {
+                if (progress.percent != null) {
+                    var displayedPercent by remember(progress.step) {
+                        mutableIntStateOf(progress.percent.coerceIn(0, 99))
+                    }
+                    val estimateCeiling = when {
+                        progress.percent < 12 -> 11
+                        progress.percent < 22 -> 21
+                        progress.percent < 30 -> 29
+                        progress.percent < 42 -> 41
+                        progress.percent < 58 -> 57
+                        progress.percent < 94 -> 92
+                        else -> 99
+                    }
+                    LaunchedEffect(progress.percent) {
+                        if (progress.percent > displayedPercent) {
+                            displayedPercent = progress.percent.coerceAtMost(99)
+                        }
+                    }
+                    LaunchedEffect(progress.step, estimateCeiling) {
+                        while (true) {
+                            delay(15_000)
+                            if (displayedPercent < estimateCeiling) {
+                                displayedPercent += 1
+                            }
+                        }
+                    }
+                    val displayedProgress = animateFloatAsState(
+                        targetValue = displayedPercent / 100f,
+                        label = "workspaceInstallProgress",
+                    )
+                    LinearProgressIndicator(
+                        progress = { displayedProgress.value },
+                        modifier = Modifier.fillMaxWidth().height(6.dp),
+                        color = accent,
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    )
+                    Text(
+                        "$displayedPercent% estimated · live installation continues in Termux",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = supportingColor,
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(6.dp),
+                        color = accent,
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    )
+                    Text(
+                        "Still working in Termux",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = supportingColor,
+                    )
+                }
             } else if (progress.percent != null) {
                 LinearProgressIndicator(
                     progress = { progress.percent / 100f },
@@ -191,7 +254,7 @@ fun InstallProgressPanel(
                     trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                 )
                 Text(
-                    "${progress.percent}% · milestone progress; download time varies",
+                    "${progress.percent}% complete",
                     style = MaterialTheme.typography.labelSmall,
                     color = supportingColor,
                 )
@@ -200,11 +263,6 @@ fun InstallProgressPanel(
                     modifier = Modifier.fillMaxWidth().height(6.dp),
                     color = accent,
                     trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                )
-                Text(
-                    "Installation is active in the background",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = supportingColor,
                 )
             }
         }

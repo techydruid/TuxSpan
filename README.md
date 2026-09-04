@@ -79,15 +79,13 @@ When using the recommended F-Droid Termux build, choose **`termux-x11-universal-
 
 ## User flow
 
-1. Open **Device lab** and review the capability tier.
-2. Pick Canvas, Studio, or Spark under **Blueprints**.
-3. Install the required companion apps from their official sources.
-4. Grant TuxSpan the Termux command permission.
-5. Copy the one-time Termux opt-in command shown in **Connections**, paste it into Termux, and run it.
-6. Tap **Review**, inspect the exact command, then **Run reviewed setup**.
-7. When Termux reports completion, return to TuxSpan and tap **Verify**.
-8. Launch the workspace from **Workbench**.
-9. Choose Mobile or Desktop layout, touch mode, and a power preset. Restart the session after changing layout or power settings.
+1. Open TuxSpan and complete the four-step **Connect TuxSpan** checklist on Home.
+2. Install the required official companion apps, grant the Termux command permission, and verify the one-time Termux consent.
+3. Tap **Choose a Linux workspace**, then pick Canvas, Studio, or Spark under **Plans**.
+4. Tap **Review**, inspect the exact command, then **Run reviewed setup**.
+5. Watch the real package installation in Termux, or return to TuxSpan to see its animated progress and latest milestone.
+6. When setup finishes, launch the workspace from **Home**.
+7. Choose Mobile or Desktop layout, touch mode, and a power preset. Restart the session after changing layout or power settings.
 
 Termux:X11's extra-key bar is verified hidden when TuxSpan launches a desktop. Use **Settings > Input > Show desktop controls** when you need it, then hide it again from the same screen. Android Back toggles the software keyboard, while connecting an external alphabetic keyboard suppresses the IME automatically. Multi-finger shortcuts are intentionally avoided because several manufacturers reserve them for system gestures such as screenshots.
 
@@ -106,6 +104,8 @@ Requirements:
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 Production builds read signing material from `TUXSPAN_KEYSTORE_PATH`, `TUXSPAN_KEYSTORE_PASSWORD`, `TUXSPAN_KEY_ALIAS`, and `TUXSPAN_KEY_PASSWORD`. Never commit a keystore or its credentials. With those variables configured, run `./gradlew assembleRelease`; the signed APK is written to `app/build/outputs/apk/release/app-release.apk`.
+
+Development builds use the separate package ID `dev.tuxspan.mobile.debug` and launcher label **TuxSpan Dev**. They are not release updates. Public APKs always use `dev.tuxspan.mobile` with the same production certificate. See [release verification](docs/RELEASING.md) and [legacy installation conflicts](docs/TROUBLESHOOTING.md#tuxspan-apk-conflicts-with-an-existing-package).
 
 ## Architecture
 

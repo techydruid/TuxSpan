@@ -48,6 +48,7 @@ fun BuildWorkspaceSheet(
     onGrantPermission: () -> Unit,
     onOpenTermux: () -> Unit,
     onCopyOptIn: () -> Unit,
+    onVerifyTermuxConsent: () -> Unit,
     onCopyManualSetup: () -> Unit,
     onInstall: () -> Unit,
     onVerify: () -> Unit,
@@ -56,6 +57,7 @@ fun BuildWorkspaceSheet(
     val needsX11 = recipe.kind == WorkspaceKind.DESKTOP
     val dependenciesReady = state.companions.termuxInstalled &&
         state.companions.runCommandGranted &&
+        state.experience.termuxConsentCompleted &&
         (!needsX11 || state.companions.x11Installed)
     val installDispatched =
         state.workspace(recipe.id)?.phase == WorkspacePhase.INSTALL_DISPATCHED
@@ -88,10 +90,15 @@ fun BuildWorkspaceSheet(
             }
             if (installationRunning) {
                 Text(
-                    "You can leave this screen while setup continues. Keep the phone online, avoid force-stopping Termux, and TuxSpan will update each completed stage here.",
+                    "Installation is running in a visible Termux session. Return here anytime to see the current stage; the animated bar shows that TuxSpan is still monitoring it.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                OutlinedButton(onClick = onOpenTermux, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("View live installation in Termux")
+                }
             }
             Surface(
                 shape = RoundedCornerShape(20.dp),
@@ -140,29 +147,56 @@ fun BuildWorkspaceSheet(
                     }
                 },
             )
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("One-time Termux consent", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(5.dp))
-                    Text(
-                        "Copy the opt-in command, open Termux, paste it, and press Enter. TuxSpan cannot silently enable this setting.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onCopyOptIn, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Outlined.ContentCopy, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Copy")
+            ReadinessRow(
+                label = "Termux consent",
+                detail = if (state.experience.termuxConsentCompleted) {
+                    "Connection verified"
+                } else {
+                    "Run the one-time command in Termux"
+                },
+                ready = state.experience.termuxConsentCompleted,
+                action = {},
+            )
+            if (!state.experience.termuxConsentCompleted) {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("One-time Termux consent", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(5.dp))
+                        Text(
+                            "Copy the command, open Termux, paste it, and press Enter. Then return and check the connection.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = onCopyOptIn, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Outlined.ContentCopy, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Copy")
+                            }
+                            OutlinedButton(onClick = onOpenTermux, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Open Termux")
+                            }
                         }
-                        OutlinedButton(onClick = onOpenTermux, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Open")
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onVerifyTermuxConsent,
+                            enabled = state.companions.runCommandGranted &&
+                                state.activeOperation != "termux_consent",
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                if (state.activeOperation == "termux_consent") {
+                                    "Checking…"
+                                } else {
+                                    "Check connection"
+                                },
+                            )
                         }
                     }
                 }
@@ -213,10 +247,12 @@ fun BuildWorkspaceSheet(
                         Spacer(Modifier.width(8.dp))
                         Text("Copy manual setup")
                     }
-                    OutlinedButton(onClick = onOpenTermux, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Open Termux")
+                    if (!installationRunning) {
+                        OutlinedButton(onClick = onOpenTermux, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Open Termux")
+                        }
                     }
                 }
             } else {

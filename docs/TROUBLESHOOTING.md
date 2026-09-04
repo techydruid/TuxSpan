@@ -2,6 +2,18 @@
 
 Start with the exact status and recovery action shown on TuxSpan's Home screen. Avoid deleting a workspace unless you are prepared to lose the files stored inside it.
 
+## TuxSpan APK conflicts with an existing package
+
+Download the production APK from the [latest release](https://github.com/techydruid/TuxSpan/releases/latest), not an older release or a development/CI artifact. Android blocks incompatible signing certificates and may also reject a version downgrade.
+
+Early debug builds used the same package ID as the production app, but a different signing certificate. They cannot be updated directly to a production-signed APK. Removing the icon from the main Android user may not be enough: a copy in another Android user, work profile, private space, or cloned-app profile can still block installation.
+
+Before uninstalling anything, check the installed TuxSpan version in every relevant profile. Back up any TuxSpan preferences you want to keep. If the conflicting copy is a legacy debug build, remove **only TuxSpan** from the affected profiles, then install the current production APK. This resets TuxSpan's own preferences and permissions. Linux workspaces are stored in Termux; keep Termux installed and do not clear its data. TuxSpan can rediscover existing workspaces after reconnecting to Termux.
+
+Do not delete an Android user/profile to solve this problem. Do not uninstall Termux or Termux:X11 as part of the TuxSpan signature migration. If you are unsure which copy conflicts, capture the exact Android installer/ADB error before removing an app.
+
+Starting with 0.21.0, newly built development APKs use `dev.tuxspan.mobile.debug` and the label **TuxSpan Dev**. Public releases keep `dev.tuxspan.mobile` and the dedicated production signing certificate. Production updates are installed over the existing production app without uninstalling it.
+
 ## Setup finishes but Verify says not ready
 
 1. Return to Termux and confirm that the setup command has actually reached its completion message.

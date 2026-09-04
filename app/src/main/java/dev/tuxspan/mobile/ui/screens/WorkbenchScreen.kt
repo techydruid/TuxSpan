@@ -72,6 +72,8 @@ import dev.tuxspan.mobile.model.WorkspaceRecipe
 import dev.tuxspan.mobile.ui.BrandLockup
 import dev.tuxspan.mobile.ui.Eyebrow
 import dev.tuxspan.mobile.ui.InstallProgressPanel
+import dev.tuxspan.mobile.ui.InitialSetupCard
+import dev.tuxspan.mobile.ui.NoWorkspaceCard
 import dev.tuxspan.mobile.ui.theme.Coral
 import dev.tuxspan.mobile.ui.theme.Lime
 import dev.tuxspan.mobile.workspace.WorkspacePhase
@@ -92,6 +94,13 @@ fun WorkbenchScreen(
     onShowGuide: () -> Unit,
     onInstallBundle: (String) -> Unit,
     onRemove: () -> Unit,
+    onDownloadTermux: () -> Unit,
+    onDownloadX11: () -> Unit,
+    onGrantPermission: () -> Unit,
+    onCopyOptIn: () -> Unit,
+    onOpenTermux: () -> Unit,
+    onVerifyConsent: () -> Unit,
+    onCompleteInitialSetup: () -> Unit,
 ) {
     val activeWorkspace = state.activeWorkspace
     val recipe = activeWorkspace?.let { WorkspaceCatalog.byId(it.recipeId) }
@@ -178,20 +187,35 @@ fun WorkbenchScreen(
             }
         }
         item {
-            WorkspaceHero(
-                state = state,
-                recipe = recipe,
-                phase = phase,
-                onBuild = onBuild,
-                onLaunch = onLaunch,
-                onStop = onStop,
-                onRestart = onRestart,
-                onReconnect = onReconnect,
-                onVerify = onVerify,
-                onOpenBlueprints = onOpenBlueprints,
-                onOpenSettings = onOpenSettings,
-                onOpenApps = { appsVisible = true },
-            )
+            when {
+                state.initialSetupRequired -> InitialSetupCard(
+                    state = state,
+                    onDownloadTermux = onDownloadTermux,
+                    onDownloadX11 = onDownloadX11,
+                    onGrantPermission = onGrantPermission,
+                    onCopyOptIn = onCopyOptIn,
+                    onOpenTermux = onOpenTermux,
+                    onVerifyConsent = onVerifyConsent,
+                    onContinue = onCompleteInitialSetup,
+                )
+
+                activeWorkspace == null -> NoWorkspaceCard(onChooseWorkspace = onOpenBlueprints)
+
+                else -> WorkspaceHero(
+                    state = state,
+                    recipe = recipe,
+                    phase = phase,
+                    onBuild = onBuild,
+                    onLaunch = onLaunch,
+                    onStop = onStop,
+                    onRestart = onRestart,
+                    onReconnect = onReconnect,
+                    onVerify = onVerify,
+                    onOpenBlueprints = onOpenBlueprints,
+                    onOpenSettings = onOpenSettings,
+                    onOpenApps = { appsVisible = true },
+                )
+            }
         }
     }
 

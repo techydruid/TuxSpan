@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.21.0 — 2026-09-04
+
+- Replace the premature Canvas home card with a first-run connection checklist, then let the user choose a workspace only after Termux is ready.
+- Track the one-time Termux consent check as a completed onboarding step instead of repeatedly presenting an unverified instruction.
+- Open every reviewed installation in a visible Termux session and stream the real package-manager output to the screen while preserving the same diagnostic log.
+- Keep installation progress active in TuxSpan with durable milestones, an advancing in-stage estimate during long package operations, and a direct button back to the live Termux session.
+- Remove the auto-hidden XFCE top panel that could open over maximized window controls; application access and running windows remain in the bottom dock.
+- Open Termux before starting its storage command, then wait for the visible activity to settle before requesting Android access; this avoids OEM background-service blocks and permission dialogs lost during the transition.
+- Clarify the first-run, workspace-selection, and installation instructions for new users.
+- Give development builds their own package ID and TuxSpan Dev label so future test APKs do not conflict with production releases.
+- Document recovery from legacy debug-signature conflicts, including copies left in secondary Android users or profiles.
+
 ## 0.20.0 — 2026-09-02
 
 - Publish the first production-signed APK with standard release naming and a dedicated long-term signing identity.

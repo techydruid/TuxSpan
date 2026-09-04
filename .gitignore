@@ -6,4 +6,7 @@ build/
 *.iml
 captures/
 .DS_Store
-
+.kotlin/
+*.jks
+*.keystore
+*.p12

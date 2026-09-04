@@ -24,8 +24,8 @@ android {
         applicationId = "dev.tuxspan.mobile"
         minSdk = 26
         targetSdk = 37
-        versionCode = 58
-        versionName = "0.20.0"
+        versionCode = 59
+        versionName = "0.21.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -43,6 +43,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Development APKs must never replace the production app, including
+            // copies installed in a secondary Android user/profile.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-dev"
+        }
         release {
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")

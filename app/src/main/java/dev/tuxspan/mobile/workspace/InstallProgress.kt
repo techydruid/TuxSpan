@@ -24,7 +24,7 @@ data class InstallProgress(
             step = 1,
             totalSteps = totalSteps,
             title = "Preparing Termux",
-            detail = "Starting the reviewed installation in the background.",
+            detail = "Opening the reviewed installation in Termux.",
         )
 
         fun parse(output: String): InstallProgress? {

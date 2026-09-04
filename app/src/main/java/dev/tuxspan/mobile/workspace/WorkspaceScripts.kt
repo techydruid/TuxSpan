@@ -82,6 +82,42 @@ object WorkspaceScripts {
                   "${'$'}1" "${'$'}2" "${'$'}3" "${'$'}4" "${'$'}5" > "${'$'}TUXSPAN_PROGRESS_FILE"
               fi
             }
+            tuxspan_run_with_estimated_progress() {
+              progress_value="${'$'}1"
+              progress_cap="${'$'}2"
+              progress_step="${'$'}3"
+              progress_total="${'$'}4"
+              progress_title="${'$'}5"
+              progress_detail="${'$'}6"
+              shift 6
+
+              "${'$'}@" &
+              progress_command_pid="${'$'}!"
+              (
+                while kill -0 "${'$'}progress_command_pid" >/dev/null 2>&1; do
+                  tuxspan_progress \
+                    "${'$'}progress_value" \
+                    "${'$'}progress_step" \
+                    "${'$'}progress_total" \
+                    "${'$'}progress_title" \
+                    "${'$'}progress_detail"
+                  sleep 15
+                  if [ "${'$'}progress_value" -lt "${'$'}progress_cap" ]; then
+                    progress_value=${'$'}((progress_value + 1))
+                  fi
+                done
+              ) &
+              progress_ticker_pid="${'$'}!"
+
+              if wait "${'$'}progress_command_pid"; then
+                progress_exit_code=0
+              else
+                progress_exit_code="${'$'}?"
+              fi
+              kill "${'$'}progress_ticker_pid" >/dev/null 2>&1 || true
+              wait "${'$'}progress_ticker_pid" >/dev/null 2>&1 || true
+              return "${'$'}progress_exit_code"
+            }
             tuxspan_progress 5 1 $totalSteps 'Preparing Termux' 'Starting the reviewed setup.'
             printf '\nTuxSpan is preparing %s.\n' '${recipe.name}'
             tuxspan_progress 12 2 $totalSteps 'Updating Termux' 'Refreshing package information.'
@@ -95,8 +131,11 @@ object WorkspaceScripts {
             else
               proot-distro install --name '$name' '${recipe.image}'
             fi
-            tuxspan_progress 58 $guestStep $totalSteps 'Installing Linux apps' 'Downloading the desktop and reviewed starter applications.'
-            proot-distro login --env "PROOT_TMP_DIR=${'$'}tuxspan_proot_tmp" '$name' -- /bin/sh -lc ${shellQuote(guestSetup)}
+            tuxspan_run_with_estimated_progress \
+              58 92 $guestStep $totalSteps \
+              'Installing Linux apps' \
+              'Downloading and configuring the reviewed Linux applications.' \
+              proot-distro login --env "PROOT_TMP_DIR=${'$'}tuxspan_proot_tmp" '$name' -- /bin/sh -lc ${shellQuote(guestSetup)}
             tuxspan_progress 94 $finalizeStep $totalSteps 'Finalizing workspace' 'Creating launchers and recording the completed setup.'
             mkdir -p "${'$'}HOME/.local/bin"
             printf '%s' '$encodedLauncher' | base64 -d > "${'$'}HOME/.local/bin/tuxspan-${recipe.id}"
@@ -123,7 +162,7 @@ object WorkspaceScripts {
             ">/dev/null 2>&1 && printf 'TUXSPAN_READY'"
     }
 
-    /** Runs without a terminal UI, returning only a compact result and the tail of failures. */
+    /** Streams the reviewed install to Termux while retaining the same output for diagnostics. */
     fun trackedInstall(recipe: WorkspaceRecipe): String {
         val stateDir = "${'$'}HOME/.local/state/tuxspan"
         val statusFile = "${'$'}state_dir/${recipe.id}.status"
@@ -141,14 +180,16 @@ object WorkspaceScripts {
             appendLine("export TUXSPAN_PROGRESS_FILE=\"${'$'}progress_file\"")
             appendLine("printf 'RUNNING|5|1|$totalSteps|Preparing Termux|Starting the reviewed setup.\\n' > \"${'$'}progress_file\"")
             appendLine(": > \"${'$'}log_file\"")
-            appendLine("if (")
+            appendLine("set +e")
+            appendLine("(")
             appendLine(install(recipe))
-            appendLine(") >> \"${'$'}log_file\" 2>&1; then")
+            appendLine(") 2>&1 | tee -a \"${'$'}log_file\"")
+            appendLine("exit_code=${'$'}{PIPESTATUS[0]}")
+            appendLine("if [ \"${'$'}exit_code\" -eq 0 ]; then")
             appendLine("  printf 'ready\\n' > \"${'$'}status_file\"")
             appendLine("  printf 'READY|100|$totalSteps|$totalSteps|Setup complete|The workspace is ready to launch.\\n' > \"${'$'}progress_file\"")
             appendLine("  printf 'TUXSPAN_INSTALL_READY'")
             appendLine("else")
-            appendLine("  exit_code=${'$'}?")
             appendLine("  printf 'failed\\n' > \"${'$'}status_file\"")
             appendLine("  printf 'FAILED|-1|0|$totalSteps|Setup needs attention|Open the setup details and retry; existing files are preserved.\\n' > \"${'$'}progress_file\"")
             appendLine("  printf 'Setup failed. Last log lines:\\n' >&2")
@@ -169,7 +210,7 @@ object WorkspaceScripts {
               printf 'TUXSPAN_PROGRESS|'
               tail -n 1 "${'$'}progress_file"
             elif [ "${'$'}status" = 'running' ]; then
-              printf 'TUXSPAN_PROGRESS|RUNNING|-1|0|$totalSteps|Installing Linux packages|Termux is active in the background.'
+              printf 'TUXSPAN_PROGRESS|RUNNING|-1|0|$totalSteps|Installing Linux packages|The live installation is continuing in Termux.'
             elif [ "${'$'}status" = 'ready' ]; then
               printf 'TUXSPAN_PROGRESS|READY|100|$totalSteps|$totalSteps|Setup complete|The workspace is ready to launch.'
             elif [ "${'$'}status" = 'failed' ]; then
@@ -821,6 +862,11 @@ object WorkspaceScripts {
           printf 'termux-setup-storage is not installed. Update the termux-tools package.\n' >&2
           exit 1
         fi
+        # RUN_COMMAND may begin a fraction of a second before Android finishes
+        # bringing the Termux activity to the foreground. Permission dialogs
+        # requested during that transition can be suppressed by recent Android
+        # versions, so let the visible Termux session settle first.
+        sleep 2
         # The official helper asks for terminal input whenever ~/storage
         # already exists. TuxSpan may be repairing a partial first attempt, so
         # answer that safe rebuild prompt non-interactively before Android's
@@ -1086,7 +1132,6 @@ object WorkspaceScripts {
         dpi: Int,
     ): String {
         val mobile = settings.displayProfile == DisplayProfile.MOBILE
-        val panelSize = if (mobile) 54 else 38
         val fontName = if (mobile) "Sans 12" else "Sans 10"
         val titleFont = if (mobile) "Sans Bold 12" else "Sans Bold 10"
         val windowTheme = if (mobile) "Default-hdpi" else "Default"
@@ -1096,7 +1141,6 @@ object WorkspaceScripts {
         val bottomPanelSize = if (mobile) 60 else 46
         val bottomPanelInset = if (mobile) 14 else 6
         val showFilesystemIcon = !mobile
-        val autoHide = settings.displayProfile.panelAutoHideBehavior
         val compositor = settings.performancePreset == PerformancePreset.BALANCED
         val dockPositioner = """
             #!/bin/sh
@@ -1295,10 +1339,13 @@ object WorkspaceScripts {
             set_value xfce4-desktop /desktop-icons/file-icons/show-filesystem bool '$showFilesystemIcon'
             set_value xfce4-desktop /desktop-icons/file-icons/show-home bool 'true'
             set_value xfce4-desktop /desktop-icons/file-icons/show-trash bool 'true'
-            set_value xfce4-panel /panels/panel-1/size uint '$panelSize'
-            set_value xfce4-panel /panels/panel-1/nrows uint '1'
-            set_value xfce4-panel /panels/panel-1/length uint '100'
-            set_value xfce4-panel /panels/panel-1/autohide-behavior uint '$autoHide'
+            # Remove XFCE's top panel instead of auto-hiding it. An auto-hidden
+            # top-edge panel opens directly over maximized window controls,
+            # making minimize and maximize frustrating with a mouse. The
+            # Applications menu and running-window list remain in panel 2.
+            xfconf-query -c xfce4-panel -p /panels -r >/dev/null 2>&1 || true
+            xfconf-query -c xfce4-panel -p /panels -n -a -t int -s 2 >/dev/null 2>&1
+            xfconf-query -c xfce4-panel -p /panels/panel-1 -r -R >/dev/null 2>&1 || true
             set_value xfce4-panel /panels/panel-2/autohide-behavior uint '0'
             set_value xfce4-panel /panels/panel-2/size uint '$bottomPanelSize'
             set_value xfce4-panel /panels/panel-2/nrows uint '1'
@@ -1347,28 +1394,6 @@ object WorkspaceScripts {
             printf '%s' '$encodedDockPositioner' | base64 -d > "${'$'}dock_positioner"
             chmod 700 "${'$'}dock_positioner"
             set_value xfwm4 /general/workspace_count int '1'
-            for plugin_id in ${'$'}(xfconf-query -c xfce4-panel -p /panels/panel-1/plugin-ids 2>/dev/null); do
-              case "${'$'}plugin_id" in ''|*[!0-9]*) continue ;; esac
-              plugin_path="/plugins/plugin-${'$'}plugin_id"
-              plugin_type=${'$'}(xfconf-query -c xfce4-panel -p "${'$'}plugin_path" 2>/dev/null)
-              case "${'$'}plugin_type" in
-                pager)
-                  set_value xfce4-panel "${'$'}plugin_path" string 'separator'
-                  set_value xfce4-panel "${'$'}plugin_path/expand" bool 'false'
-                  set_value xfce4-panel "${'$'}plugin_path/style" uint '0'
-                  ;;
-                actions)
-                  # PRoot cannot safely power off or reboot Android. Keep the
-                  # panel action honest: one confirmed desktop logout instead
-                  # of XFCE's system-power dialog with disabled buttons.
-                  xfconf-query -c xfce4-panel -p "${'$'}plugin_path/items" -r >/dev/null 2>&1 || true
-                  xfconf-query -c xfce4-panel -p "${'$'}plugin_path/items" -n -a \
-                    -t string -s '+logout-dialog' >/dev/null 2>&1
-                  set_value xfce4-panel "${'$'}plugin_path/appearance" uint '0'
-                  set_value xfce4-panel "${'$'}plugin_path/ask-confirmation" bool 'true'
-                  ;;
-              esac
-            done
             set_value xfwm4 /general/theme string '$windowTheme'
             set_value xfwm4 /general/title_font string '$titleFont'
             set_value xfwm4 /general/use_compositing bool '$compositor'

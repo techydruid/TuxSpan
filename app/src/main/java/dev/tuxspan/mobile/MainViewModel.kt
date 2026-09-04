@@ -62,6 +62,14 @@ data class MainUiState(
 
     val sessionNeedsRepair: Boolean
         get() = sessionError?.contains("desktop packages are incomplete", ignoreCase = true) == true
+
+    val initialSetupRequired: Boolean
+        get() = installedWorkspaces.isEmpty() && !experience.initialSetupCompleted
+
+    val coreSetupReady: Boolean
+        get() = companions.termuxInstalled &&
+            companions.runCommandGranted &&
+            experience.termuxConsentCompleted
 }
 
 enum class SessionStatus(val label: String) {
@@ -94,6 +102,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val state: StateFlow<MainUiState> = mutableState.asStateFlow()
     private var installProgressJob: Job? = null
+    private var consentCheckJob: Job? = null
     private var launchWatchdogJob: Job? = null
     private var displayPrepareWatchdogJob: Job? = null
     private var pendingDisplayRequestId: Int? = null
@@ -155,6 +164,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     TAG_INSTALL_PROGRESS -> handleInstallProgress(result)
+
+                    TAG_TERMUX_CONSENT -> handleTermuxConsentResult(result)
 
                     TAG_WORKSPACE_SCAN -> handleWorkspaceScan(result)
 
@@ -401,13 +412,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refresh() {
         val app = getApplication<Application>()
+        val companions = CompanionInspector.inspect(app)
+        val savedExperience = experienceRepository.load()
+        val experience = if (!companions.termuxInstalled && savedExperience.termuxConsentCompleted) {
+            savedExperience.copy(
+                termuxConsentCompleted = false,
+                initialSetupCompleted = false,
+            ).also(experienceRepository::save)
+        } else {
+            savedExperience
+        }
         mutableState.update {
             it.copy(
                 device = DeviceInspector.inspect(app),
-                companions = CompanionInspector.inspect(app),
+                companions = companions,
                 installedWorkspaces = repository.loadAll(),
                 activeWorkspaceId = repository.activeRecipeId(),
-                experience = experienceRepository.load(),
+                experience = experience,
             )
         }
         val saved = repository.loadAll().firstOrNull {
@@ -548,8 +569,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 label = "Build TuxSpan ${recipe.name}",
                 description = "Installs the reviewed ${recipe.distroLabel} recipe.",
                 script = WorkspaceScripts.trackedInstall(recipe),
-                background = true,
-                collectResult = true,
+                background = false,
+                // Package output can be very large. The durable progress/status
+                // files are polled separately, avoiding a large Binder callback.
+                collectResult = false,
             ),
         )
         if (result.isSuccess) {
@@ -565,12 +588,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     activeWorkspaceId = repository.activeRecipeId(),
                     activeOperation = TAG_INSTALL,
                     installingWorkspaceId = recipe.id,
-                    message = "${recipe.name} installation started in Termux.",
+                    message = "${recipe.name} installation opened in Termux. Return here anytime to check progress.",
                     buildMessage = null,
                     installProgress = InstallProgress.starting(installStepCount(recipe)),
                 )
             }
             startInstallProgressPolling(recipe)
+            viewModelScope.launch {
+                // Android 10+ may prevent Termux's service from opening its own
+                // activity. Give it time to create and select the terminal
+                // session, then bring that already-running session forward.
+                delay(900)
+                if (!bridge.openTermux()) {
+                    mutableState.update {
+                        it.copy(message = "Installation started, but Termux could not be opened. Tap View live installation in Termux.")
+                    }
+                }
+            }
         } else {
             mutableState.update {
                 val failure = result.exceptionOrNull()?.message ?: "Could not start setup."
@@ -1050,32 +1084,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         mutableState.update { it.copy(storageBridgeReady = false, storageBridgeChecking = true) }
-        val dispatched = bridge.dispatch(
-            CommandRequest(
-                tag = TAG_STORAGE,
-                label = "Enable Android Downloads",
-                description = "Requests Termux storage access and rebuilds its Downloads link.",
-                script = WorkspaceScripts.requestStorageAccess(),
-                background = false,
-                collectResult = false,
-            ),
-        )
-        if (dispatched.isFailure) {
-            mutableState.update {
-                it.copy(
-                    storageBridgeChecking = false,
-                    message = dispatched.exceptionOrNull()?.message
-                        ?: "Termux could not start the storage permission request.",
-                )
-            }
-            return
-        }
         if (!bridge.openTermux()) {
             mutableState.update {
                 it.copy(
                     storageBridgeChecking = false,
                     message = "Termux could not be opened for the storage permission request.",
                 )
+            }
+            return
+        }
+        viewModelScope.launch {
+            // Samsung and other recent Android builds reject RUN_COMMAND while
+            // the target Termux app is still backgrounded. Open it first, then
+            // dispatch during Android's foreground transition grace period.
+            delay(700)
+            val dispatched = bridge.dispatch(
+                CommandRequest(
+                    tag = TAG_STORAGE,
+                    label = "Enable Android Downloads",
+                    description = "Requests Termux storage access and rebuilds its Downloads link.",
+                    script = WorkspaceScripts.requestStorageAccess(),
+                    background = false,
+                    collectResult = false,
+                ),
+            )
+            if (dispatched.isFailure) {
+                mutableState.update {
+                    it.copy(
+                        storageBridgeChecking = false,
+                        message = dispatched.exceptionOrNull()?.message
+                            ?: "Termux could not start the storage permission request.",
+                    )
+                }
             }
         }
     }
@@ -1252,6 +1292,94 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun verifyTermuxConsent() {
+        val companions = mutableState.value.companions
+        if (!companions.termuxInstalled) {
+            mutableState.update { it.copy(message = "Install and open Termux first.") }
+            return
+        }
+        if (!companions.runCommandGranted) {
+            mutableState.update { it.copy(message = "Grant the Run command permission first.") }
+            return
+        }
+        consentCheckJob?.cancel()
+        CommandResultBus.clear()
+        val result = bridge.dispatch(
+            CommandRequest(
+                tag = TAG_TERMUX_CONSENT,
+                label = "Verify TuxSpan setup",
+                description = "Checks that Termux accepts commands from TuxSpan.",
+                script = "printf 'TUXSPAN_CONSENT_READY\\n'",
+                background = true,
+                collectResult = true,
+            ),
+        )
+        if (result.isFailure) {
+            mutableState.update {
+                it.copy(
+                    activeOperation = null,
+                    message = result.exceptionOrNull()?.message
+                        ?: "Termux could not verify the one-time consent.",
+                )
+            }
+            return
+        }
+        mutableState.update {
+            it.copy(
+                activeOperation = TAG_TERMUX_CONSENT,
+                message = "Checking the Termux connection…",
+            )
+        }
+        consentCheckJob = viewModelScope.launch {
+            delay(10_000)
+            if (mutableState.value.activeOperation == TAG_TERMUX_CONSENT) {
+                mutableState.update {
+                    it.copy(
+                        activeOperation = null,
+                        message = "Termux did not confirm the connection. Run the copied consent command in Termux, then try again.",
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleTermuxConsentResult(result: dev.tuxspan.mobile.termux.CommandResult) {
+        consentCheckJob?.cancel()
+        val verified = result.succeeded && result.stdout.contains("TUXSPAN_CONSENT_READY")
+        val rawFailure = listOf(result.internalError, result.stderr, result.stdout)
+            .joinToString("\n")
+        val failureMessage = if (rawFailure.contains("allow-external-apps", ignoreCase = true)) {
+            "Termux consent is not enabled yet. Tap Copy, run the command in Termux, then check again."
+        } else {
+            "Termux could not confirm the connection. Make sure the copied command finished, then check again."
+        }
+        val updated = if (verified) {
+            mutableState.value.experience.copy(termuxConsentCompleted = true)
+                .also(experienceRepository::save)
+        } else {
+            mutableState.value.experience
+        }
+        mutableState.update {
+            it.copy(
+                experience = updated,
+                activeOperation = null,
+                message = if (verified) {
+                    "Termux is connected. You can now choose a Linux workspace."
+                } else {
+                    failureMessage
+                },
+            )
+        }
+    }
+
+    fun completeInitialSetup() {
+        if (!mutableState.value.coreSetupReady) {
+            mutableState.update { it.copy(message = "Complete the required Termux steps first.") }
+            return
+        }
+        updateExperience { it.copy(initialSetupCompleted = true) }
+    }
+
     fun dismissMessage() {
         mutableState.update { it.copy(message = null) }
     }
@@ -1394,6 +1522,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private companion object {
         const val TAG_INSTALL = "install"
         const val TAG_INSTALL_PROGRESS = "install_progress"
+        const val TAG_TERMUX_CONSENT = "termux_consent"
         const val TAG_WORKSPACE_SCAN = "workspace_scan"
         const val TAG_SWITCH_STOP = "workspace_switch_stop"
         const val TAG_VERIFY = "verify"
