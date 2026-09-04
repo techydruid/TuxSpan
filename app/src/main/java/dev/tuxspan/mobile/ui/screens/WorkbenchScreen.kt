@@ -420,12 +420,12 @@ private fun WorkspaceHero(
                             )
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text(
-                                    "Desktop packages are incomplete",
+                                    "Workspace update or repair needed",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                                 Text(
-                                    "Repair will install the missing XFCE components and keep your existing workspace files.",
+                                    "Repair updates the Linux account and missing components. Existing files are kept. Close any running desktop first.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                 )

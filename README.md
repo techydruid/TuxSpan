@@ -46,6 +46,7 @@ New to Termux? Follow the [beginner installation guide](docs/INSTALLATION.md). I
 - **Useful on first launch:** desktop recipes include a browser, LibreOffice, PDF/text/image/media viewers, common media codecs, file and archive tools, search, screenshot, task manager, calculator, fonts, and terminal utilities; creator and larger developer tools stay optional.
 - **Reliable sessions:** visible Starting / Running / Stopped / Error state with Launch, Reconnect, Restart, and scoped Stop controls.
 - **Optional file bridge:** Android Downloads can be exposed at `~/Android-Downloads` after the user grants Termux storage access.
+- **Normal Linux commands:** Canvas and Studio run as a regular user. Install compatible packages with `sudo apt install PACKAGE` from the desktop terminal, then open apps without `sudo`. See [installing Linux apps](docs/INSTALLATION.md#installing-linux-apps) for upgrade steps and compatibility limits.
 
 ## Application packs
 

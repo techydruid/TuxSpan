@@ -47,6 +47,24 @@ If setup fails, Termux still returns to the command prompt, but the message says
 
 The first desktop launch may take longer than later launches. Canvas and Studio open in landscape by default.
 
+## Installing Linux apps
+
+Canvas and Studio use a regular Linux account named `tuxspan`. Open **Terminal inside the Linux desktop** and use the normal distribution commands:
+
+```sh
+sudo apt update
+sudo apt install vlc
+vlc
+```
+
+Use `sudo` for package installation, not for opening graphical applications. No account creation or special VLC launch command is needed. TuxSpan configures passwordless sudo inside the guest for convenience; this does not grant Android root access or make PRoot a security sandbox. Install only trusted packages. Spark remains a terminal-only Alpine workspace and uses `apk add PACKAGE` from its default guest shell.
+
+Only apps compatible with the distribution, CPU architecture, and PRoot can work. Installing a package cannot supply unsupported Android kernel features, a full systemd environment, Snap support, or guaranteed GPU/video acceleration. Windows executables and x86-only downloads are not ordinary ARM Linux packages.
+
+### Updating an existing root-account desktop
+
+After updating from 0.21.1 or earlier, close the Linux desktop, select **Repair** for that workspace, and run the reviewed setup once. Existing packages remain installed. TuxSpan copies personal files and settings to `/home/tuxspan`, keeps the original `/root` data, skips caches and the Android Downloads bind, and never overwrites an existing destination file. Leave sufficient free storage for the copy. If interrupted, rerun setup to continue. Each workspace is updated separately.
+
 ## Android Downloads inside Linux
 
 Open TuxSpan's storage guide and grant Termux access when Android asks. After the bridge is ready, the phone's shared Downloads folder appears inside the Linux workspace as:

@@ -1,5 +1,21 @@
 # Verification record
 
+## 0.22.0 — 2026-09-04
+
+- `testDebugUnitTest assembleRelease lintRelease` succeeded. JVM results: 36 tests, 35 passed, one skipped because this Windows host has no Bash. The exported real Bash regression suite then passed in Termux, including success/failure propagation, exit code 100, automatic prompt return, and syntax of all three installation recipes. The generated desktop account, launch, stop and profile scripts also passed shell syntax checks.
+- Android lint: zero errors and one existing `SdCardPath` warning. Production APK: `dev.tuxspan.mobile`, version `0.22.0`, versionCode `61`, minimum SDK `26`, target SDK `37`, not debuggable. Verified the unchanged production signing certificate: `4764899DEC5E840DF9A8E814DD09732255E7B312129990DEA164B4C0329C6D6C`.
+- Updated the connected phone in place from 0.21.1 without uninstalling or clearing either app. Tested the account migration on its existing Canvas desktop. Original `/root` data is kept; the new account has its own `/home/tuxspan`.
+- Ran migration fixtures inside the real Debian guest: originals retained, existing destination files and edits preserved across retries, no destination symlink traversal, absolute old-home links rewritten, and cache/Android Downloads content excluded from copying.
+- Exercised the new account-required repair state and **Repair Canvas > Run reviewed setup**. The reviewed installation reused the existing container and packages, validated sudo, printed successful completion, and returned to the Termux prompt without an extra key press. Returning to TuxSpan recognized Canvas as ready.
+- Installed unmodified Debian VLC 3.0.23 using `sudo apt install -y vlc` from the regular account. Confirmed the version command and the graphical VLC window, including its first-run privacy dialog; no VLC binary patch, root override or metadata-network consent was applied.
+- A one-time check launched inside the actual XFCE session verified a non-root `tuxspan` account, `/home/tuxspan`, working passwordless guest sudo, ordinary apt installation commands, and a read/write round trip through the desktop's Android Downloads bind. Test files in Downloads were removed immediately.
+- Tested the app's Restart control: Canvas returned to running, the account and sudo remained usable, a saved home file survived, and the regenerated persistent launcher used the normal account. Removed the temporary test file, test autostart entry and account-marker backup afterward.
+- In a separate temporary Ubuntu 24.04 guest on the phone, the exact account setup validated Ubuntu's packaged sudo and a normal-user `sudo apt install -y hello` completed; `hello` ran successfully. The account guard correctly refused migration while a graphical desktop was still running; closing that desktop allowed the test to continue. This was not a full Studio desktop installation.
+- Removed the temporary Ubuntu test container and staged test scripts after verification; the installed Canvas workspace, original data and VLC installation were retained.
+- In-place installation of the signed 0.22.0 APK succeeded under the existing production identity. The public APK is rebuilt from the release commit; use its attached `SHA256SUMS.txt` for the final download checksum.
+
+These checks validate the normal-account installation path, not every Linux application or media codec. PRoot/Android/CPU restrictions still apply. Full Studio graphical installation and Spark runtime were not repeated for this change.
+
 ## 0.21.1 — 2026-09-04
 
 - `test lint assembleRelease` succeeded with JDK 17 and SDK 37. The 33 JVM tests reported 32 passed and one skipped because Windows has no Bash executable. The skipped shell suite was then run successfully inside the connected phone's actual Termux Bash.

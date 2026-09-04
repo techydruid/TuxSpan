@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.22.0 — 2026-09-04
+
+- Run Canvas and Studio desktops as a regular `tuxspan` Linux user, with standard `sudo apt install` commands for package management.
+- Check the guest sudo configuration before marking account setup complete; graphical apps no longer need per-app root-account workarounds.
+- Preserve original root-home data during a retry-safe migration to `/home/tuxspan`; do not copy Android Downloads or cached files.
+- Create shortcuts in the user's application directory and keep the Android Downloads bridge working under the new account.
+- Require an existing desktop to be stopped before setup/repair and explain when the workspace account needs updating.
+- Document platform/architecture limits: this change does not make every Linux application compatible with PRoot.
+
 ## 0.21.1 — 2026-09-04
 
 - Keep existing package configuration files without prompting, including the locate configuration used to exclude Android storage from indexing.

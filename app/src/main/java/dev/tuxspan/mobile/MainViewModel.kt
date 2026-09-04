@@ -561,6 +561,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dispatchInstall() {
         val recipe = mutableState.value.selectedRecipe
+        if (mutableState.value.sessionStatus in setOf(SessionStatus.RUNNING, SessionStatus.STARTING)) {
+            val message = "Close the running Linux desktop before installing or updating a workspace. Your files will be kept."
+            mutableState.update { it.copy(message = message, buildMessage = message) }
+            return
+        }
         installProgressJob?.cancel()
         CommandResultBus.clear()
         val result = bridge.dispatch(

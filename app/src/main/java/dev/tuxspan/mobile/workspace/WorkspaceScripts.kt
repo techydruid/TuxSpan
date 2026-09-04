@@ -59,6 +59,9 @@ object WorkspaceScripts {
 
     fun workspaceName(recipe: WorkspaceRecipe): String = "tuxspan-${recipe.id}"
 
+    private fun desktopHealthCheck(): String =
+        "command -v startxfce4 >/dev/null && command -v dbus-run-session >/dev/null && ${DesktopAccount.check()}"
+
     fun install(recipe: WorkspaceRecipe): String {
         val name = workspaceName(recipe)
         val totalSteps = if (recipe.kind == WorkspaceKind.DESKTOP) 7 else 6
@@ -164,7 +167,7 @@ object WorkspaceScripts {
     fun verify(recipe: WorkspaceRecipe): String {
         val name = workspaceName(recipe)
         val guestCheck = if (recipe.kind == WorkspaceKind.DESKTOP) {
-            "command -v startxfce4 >/dev/null && command -v dbus-run-session >/dev/null"
+            desktopHealthCheck()
         } else {
             "/bin/true"
         }
@@ -274,8 +277,7 @@ object WorkspaceScripts {
                     "proot-distro login --env \"PROOT_TMP_DIR=${'$'}tuxspan_proot_tmp\" '${workspaceName(recipe)}' -- /bin/true >/dev/null 2>&1; then",
             )
             if (recipe.kind == WorkspaceKind.DESKTOP) {
-                val healthCheck =
-                    "command -v startxfce4 >/dev/null && command -v dbus-run-session >/dev/null"
+                val healthCheck = desktopHealthCheck()
                 appendLine(
                     "  if proot-distro login --env \"PROOT_TMP_DIR=${'$'}tuxspan_proot_tmp\" '${workspaceName(recipe)}' -- /bin/sh -lc " +
                         "${shellQuote(healthCheck)} >/dev/null 2>&1; then",
@@ -316,6 +318,7 @@ object WorkspaceScripts {
         )
         val cursorSize = settings.displayProfile.cursorSize
         val guestLaunch = """
+            set -eu
             export DISPLAY=:1 PULSE_SERVER=127.0.0.1 XCURSOR_THEME=Adwaita XCURSOR_SIZE=$cursorSize
             unset XAUTHORITY
             export NO_AT_BRIDGE=0
@@ -364,8 +367,8 @@ object WorkspaceScripts {
                   rm -f "${'$'}probe" >/dev/null 2>&1 || true
                 done
                 if test -n "${'$'}downloads_source"; then
-                  proot-distro login --env "PROOT_TMP_DIR=${'$'}proot_tmp_dir" '$name' -- /bin/mkdir -p /root/Android-Downloads >/dev/null 2>&1 || true
-                  bind_args=(--bind "${'$'}downloads_source:/root/Android-Downloads")
+                  proot-distro login --env "PROOT_TMP_DIR=${'$'}proot_tmp_dir" '$name' -- /bin/mkdir -p ${DesktopAccount.HOME}/Android-Downloads /root/Android-Downloads >/dev/null 2>&1 || true
+                  bind_args=(--bind "${'$'}downloads_source:${DesktopAccount.HOME}/Android-Downloads" --bind "${'$'}downloads_source:/root/Android-Downloads")
                   downloads_ready=true
                 else
                   printf 'Android Downloads permission or write access is not ready; starting without the bridge.\n' >&2
@@ -428,6 +431,11 @@ object WorkspaceScripts {
             mkdir -p "${'$'}proot_tmp_dir"
             chmod 700 "${'$'}proot_tmp_dir"
             export PROOT_TMP_DIR="${'$'}proot_tmp_dir"
+            if ! proot-distro login --env "PROOT_TMP_DIR=${'$'}proot_tmp_dir" '$name' -- /bin/sh -lc ${shellQuote(desktopHealthCheck())}; then
+              printf 'Error: This workspace needs its regular-user update. Close the desktop, then use Run setup again in TuxSpan. Existing files are kept.\n' >&2
+              set_session_state failed
+              exit 1
+            fi
             bind_args=()
             downloads_ready=false
             $downloadsSetup
@@ -518,7 +526,7 @@ object WorkspaceScripts {
               tail -n 10 "${'$'}pulse_log" >&2 2>/dev/null || true
             fi
             set_session_state running
-            if proot-distro login --env "PROOT_TMP_DIR=${'$'}proot_tmp_dir" --env "TUXSPAN_DOWNLOADS_READY=${'$'}downloads_ready" '$name' --bind "${'$'}x11_tmp_dir:/tmp" "${'$'}{bind_args[@]}" -- /bin/sh -lc ${shellQuote(guestLaunch)}; then
+            if proot-distro login --env "PROOT_TMP_DIR=${'$'}proot_tmp_dir" --env "TUXSPAN_DOWNLOADS_READY=${'$'}downloads_ready" '$name' --bind "${'$'}x11_tmp_dir:/tmp" "${'$'}{bind_args[@]}" -- /bin/sh -lc ${shellQuote("exec " + DesktopAccount.asUser(guestLaunch))}; then
               set_session_state stopped
               stop_owned_display
             else
@@ -987,7 +995,11 @@ object WorkspaceScripts {
         val guestCommand = buildString {
             appendLine("set -eu")
             appendLine(managerCommand)
-            if (desktopSetup.isNotBlank()) appendLine(desktopSetup)
+            if (recipe.kind == WorkspaceKind.DESKTOP) {
+                appendLine("$APT_INSTALL sudo passwd util-linux procps")
+                appendLine(DesktopAccount.setup())
+            }
+            if (desktopSetup.isNotBlank()) appendLine(DesktopAccount.asUser(desktopSetup))
         }.trimEnd()
         return "tuxspan_proot_tmp=\"${'$'}HOME/.local/state/tuxspan/proot-tmp\"; " +
             "mkdir -p \"${'$'}tuxspan_proot_tmp\"; chmod 700 \"${'$'}tuxspan_proot_tmp\"; " +
@@ -1023,13 +1035,13 @@ object WorkspaceScripts {
         val browserDesktopId = browserDesktopId(recipe)
         val browserIcon = browserIcon(recipe)
         return """
-        mkdir -p "${'$'}HOME/Desktop" /usr/local/share/applications
+        mkdir -p "${'$'}HOME/Desktop" "${'$'}HOME/.local/share/applications"
         rm -f "${'$'}HOME/Desktop/Files.desktop" "${'$'}HOME/Desktop/Geany.desktop" \
           "${'$'}HOME/Desktop/Web.desktop" "${'$'}HOME/Desktop/Firefox.desktop" \
-          /usr/local/share/applications/tuxspan-web.desktop
+          "${'$'}HOME/.local/share/applications/tuxspan-web.desktop"
         create_trusted_launcher() {
           launcher_id="${'$'}1"; launcher_name="${'$'}2"; launcher_exec="${'$'}3"; launcher_icon="${'$'}4"; desktop_link="${'$'}5"
-          launcher_path="/usr/local/share/applications/${'$'}launcher_id.desktop"
+          launcher_path="${'$'}HOME/.local/share/applications/${'$'}launcher_id.desktop"
           printf '%s\n' '[Desktop Entry]' 'Version=1.0' 'Type=Application' "Name=${'$'}launcher_name" "Exec=${'$'}launcher_exec" "Icon=${'$'}launcher_icon" 'Terminal=false' > "${'$'}launcher_path"
           chmod 644 "${'$'}launcher_path"
           ln -sfn "${'$'}launcher_path" "${'$'}desktop_link"
@@ -1058,7 +1070,7 @@ object WorkspaceScripts {
 
     private fun creatorDesktopSetup(): String = """
         creator_dir="${'$'}HOME/Desktop/Creator Tools"
-        launcher_dir=/usr/local/share/applications
+        launcher_dir="${'$'}HOME/.local/share/applications"
         mkdir -p "${'$'}creator_dir" "${'$'}launcher_dir"
         create_pack_launcher() {
           launcher_id="${'$'}1"; launcher_name="${'$'}2"; launcher_exec="${'$'}3"; launcher_icon="${'$'}4"; desktop_link="${'$'}5"
@@ -1076,7 +1088,7 @@ object WorkspaceScripts {
 
     private fun developerDesktopSetup(): String = """
         developer_dir="${'$'}HOME/Desktop/Developer Tools"
-        launcher_dir=/usr/local/share/applications
+        launcher_dir="${'$'}HOME/.local/share/applications"
         mkdir -p "${'$'}developer_dir" "${'$'}launcher_dir"
         create_pack_launcher() {
           launcher_id="${'$'}1"; launcher_name="${'$'}2"; launcher_exec="${'$'}3"; launcher_icon="${'$'}4"; desktop_link="${'$'}5"
@@ -1109,8 +1121,9 @@ object WorkspaceScripts {
             $APT_INSTALL ca-certificates
             $browserRepositorySetup
             apt-get update
-            $APT_INSTALL ${recipe.desktopPackage} xfce4-terminal dbus-x11 x11-utils $browserPackage git python3 ca-certificates $DESKTOP_STARTER_PACKAGES
-            mkdir -p /root/.config/xfce4
+            $APT_INSTALL ${recipe.desktopPackage} xfce4-terminal dbus-x11 x11-utils $browserPackage git python3 ca-certificates sudo passwd util-linux procps $DESKTOP_STARTER_PACKAGES
+            ${DesktopAccount.setup()}
+            rm -f /usr/local/share/applications/tuxspan-web.desktop
             printf 'TuxSpan guest packages installed.\n'
         """.trimIndent()
     }
@@ -1155,7 +1168,7 @@ object WorkspaceScripts {
               </dev/null >/dev/null 2>&1 &
             sleep 2
             exec proot-distro login --env "PROOT_TMP_DIR=${'$'}proot_tmp_dir" '${workspaceName(recipe)}' --bind "${'$'}x11_tmp_dir:/tmp" -- /bin/sh -lc \
-              'export DISPLAY=:1 PULSE_SERVER=127.0.0.1 NO_AT_BRIDGE=0 XDG_CURRENT_DESKTOP=XFCE XDG_SESSION_DESKTOP=xfce DESKTOP_SESSION=xfce; unset XAUTHORITY; export XDG_RUNTIME_DIR="/tmp/tuxspan-runtime-${recipe.id}"; rm -rf "${'$'}XDG_RUNTIME_DIR"; mkdir -p "${'$'}XDG_RUNTIME_DIR"; chmod 700 "${'$'}XDG_RUNTIME_DIR"; export TMPDIR=/tmp; exec dbus-run-session -- startxfce4'
+              ${shellQuote("exec " + DesktopAccount.asUser("export DISPLAY=:1 PULSE_SERVER=127.0.0.1 NO_AT_BRIDGE=0 XDG_CURRENT_DESKTOP=XFCE XDG_SESSION_DESKTOP=xfce DESKTOP_SESSION=xfce; unset XAUTHORITY; export XDG_RUNTIME_DIR=\"/tmp/tuxspan-runtime-${recipe.id}\"; mkdir -p \"${'$'}XDG_RUNTIME_DIR\"; chmod 700 \"${'$'}XDG_RUNTIME_DIR\"; export TMPDIR=/tmp; exec dbus-run-session -- startxfce4"))}
         """.trimIndent()
 
         WorkspaceKind.TERMINAL -> """
@@ -1259,6 +1272,15 @@ object WorkspaceScripts {
                 $APT_INSTALL xarchiver >>/tmp/tuxspan-archive-migration.log 2>&1
             fi
         """.trimIndent()
+        val groupNames = """
+            for inherited_gid in ${'$'}(id -G 2>/dev/null); do
+              if ! awk -F: -v gid="${'$'}inherited_gid" '${'$'}3 == gid { found=1 } END { exit !found }' /etc/group >/dev/null 2>&1; then
+                printf 'tuxspan-android-%s:x:%s:\n' "${'$'}inherited_gid" "${'$'}inherited_gid" >> /etc/group
+              fi
+            done
+        """.trimIndent()
+        val systemMaintenance = listOf(groupNames, browserMigration, firefoxStabilitySetup, archiveMigration)
+            .joinToString("\n")
         return """
             #!/bin/sh
             set +e
@@ -1266,17 +1288,14 @@ object WorkspaceScripts {
             # do not exist in the guest's /etc/group, which makes every new
             # terminal print a distracting `groups` warning. Give only those
             # inherited IDs stable local names without changing membership.
-            for inherited_gid in ${'$'}(id -G 2>/dev/null); do
-              if ! awk -F: -v gid="${'$'}inherited_gid" '${'$'}3 == gid { found=1 } END { exit !found }' /etc/group >/dev/null 2>&1; then
-                printf 'tuxspan-android-%s:x:%s:\n' "${'$'}inherited_gid" "${'$'}inherited_gid" >> /etc/group
-              fi
-            done
+            sudo -n /bin/sh -c ${shellQuote(systemMaintenance)}
             # Expose the Android bridge under the conventional Downloads name
             # and in GTK file choosers, but never replace a real user folder.
             gtk_bookmarks="${'$'}HOME/.config/gtk-3.0/bookmarks"
             mkdir -p "${'$'}HOME/.config/gtk-3.0"
             touch "${'$'}gtk_bookmarks"
             sed -i '\|file:///root/Android-Downloads|d' "${'$'}gtk_bookmarks"
+            sed -i '\|file://${DesktopAccount.HOME}/Android-Downloads|d' "${'$'}gtk_bookmarks"
             if test "${'$'}{TUXSPAN_DOWNLOADS_READY:-false}" = true && test -d "${'$'}HOME/Android-Downloads"; then
               # XFCE may pre-create an empty local Downloads directory. It is
               # safe to replace only that empty shell; never touch user files.
@@ -1286,7 +1305,7 @@ object WorkspaceScripts {
               if ! test -e "${'$'}HOME/Downloads" || test -L "${'$'}HOME/Downloads"; then
                 ln -sfn "${'$'}HOME/Android-Downloads" "${'$'}HOME/Downloads"
               fi
-              printf 'file:///root/Android-Downloads Android Downloads\n' >> "${'$'}gtk_bookmarks"
+              printf 'file://%s/Android-Downloads Android Downloads\n' "${'$'}HOME" >> "${'$'}gtk_bookmarks"
             elif test -L "${'$'}HOME/Downloads" && test "${'$'}(readlink "${'$'}HOME/Downloads")" = "${'$'}HOME/Android-Downloads"; then
               rm -f "${'$'}HOME/Downloads"
             fi
@@ -1448,9 +1467,6 @@ object WorkspaceScripts {
             else
               printf '\nFontName=%s\n' '$terminalFont' >> "${'$'}terminal_config"
             fi
-            $browserMigration
-            $firefoxStabilitySetup
-            $archiveMigration
             $shortcutSetup
             auto_keyboard_watcher="${'$'}HOME/.local/bin/tuxspan-auto-keyboard.py"
             printf '%s' '$encodedAutoKeyboardWatcher' | base64 -d > "${'$'}auto_keyboard_watcher"
@@ -1459,7 +1475,7 @@ object WorkspaceScripts {
             (
               if ! python3 -c 'import pyatspi' >/dev/null 2>&1; then
                 export DEBIAN_FRONTEND=noninteractive
-                $APT_INSTALL at-spi2-core python3-pyatspi
+                sudo -n $APT_INSTALL at-spi2-core python3-pyatspi
               fi
               exec env NO_AT_BRIDGE=0 python3 "${'$'}auto_keyboard_watcher"
             ) >/tmp/tuxspan-auto-keyboard.log 2>&1 &
