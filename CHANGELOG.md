@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.1 — 2026-09-04
+
+- Handle physical keyboard events directly in Termux:X11 instead of routing them through the Android IME scancode workaround, preventing unwanted floating-keyboard popups during hardware typing.
+- Apply the keyboard policy through both the Android preference bridge and the Termux launch recipe; leave Android-wide keyboard settings unchanged.
+- Install TuxSpan-generated desktop shortcuts in the standard application directory, avoiding XFCE's untrusted-launcher prompt and the timeout it can cause. Downloaded and user-created launchers keep XFCE's normal security checks.
+- Apply the starter-shortcut correction when restarting an existing desktop; no Linux reinstallation is required.
+
 ## 0.22.0 — 2026-09-04
 
 - Run Canvas and Studio desktops as a regular `tuxspan` Linux user, with standard `sudo apt install` commands for package management.

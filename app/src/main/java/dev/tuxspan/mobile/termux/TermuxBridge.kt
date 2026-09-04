@@ -124,6 +124,9 @@ class TermuxBridge(private val context: Context) {
             "showMouseHelper" to "false",
             "showAdditionalKbd" to "true",
             "showIMEWhileExternalConnected" to "false",
+            // Handle physical keys before Android's IME. The scancode workaround
+            // sends them through Gboard, which can reopen its floating keyboard.
+            "hardwareKbdScancodesWorkaround" to "false",
             "backButtonAction" to "toggle soft keyboard",
             "swipeUpAction" to "toggle additional key bar",
             "swipeDownAction" to "no action",

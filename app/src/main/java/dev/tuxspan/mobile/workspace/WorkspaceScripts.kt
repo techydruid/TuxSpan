@@ -732,6 +732,7 @@ object WorkspaceScripts {
           --es showMouseHelper false \
           --es showAdditionalKbd true \
           --es showIMEWhileExternalConnected false \
+          --es hardwareKbdScancodesWorkaround false \
           --es backButtonAction "toggle soft keyboard" \
           --es swipeUpAction "toggle additional key bar" \
           --es swipeDownAction "no action" \
@@ -1036,6 +1037,7 @@ object WorkspaceScripts {
         val browserIcon = browserIcon(recipe)
         return """
         mkdir -p "${'$'}HOME/Desktop" "${'$'}HOME/.local/share/applications"
+        sudo -n install -d -m 755 /usr/local/share/applications
         rm -f "${'$'}HOME/Desktop/Files.desktop" "${'$'}HOME/Desktop/Geany.desktop" \
           "${'$'}HOME/Desktop/Web.desktop" "${'$'}HOME/Desktop/Firefox.desktop" \
           "${'$'}HOME/.local/share/applications/tuxspan-web.desktop"
@@ -1044,7 +1046,11 @@ object WorkspaceScripts {
           launcher_path="${'$'}HOME/.local/share/applications/${'$'}launcher_id.desktop"
           printf '%s\n' '[Desktop Entry]' 'Version=1.0' 'Type=Application' "Name=${'$'}launcher_name" "Exec=${'$'}launcher_exec" "Icon=${'$'}launcher_icon" 'Terminal=false' > "${'$'}launcher_path"
           chmod 644 "${'$'}launcher_path"
-          ln -sfn "${'$'}launcher_path" "${'$'}desktop_link"
+          # XFCE trusts XDG_DATA_DIRS launchers, not XDG_DATA_HOME launchers.
+          # Keep user defaults local, but link the desktop to the fixed recipe
+          # installed in the standard application directory. No blanket trust.
+          sudo -n install -m 644 "${'$'}launcher_path" "/usr/local/share/applications/${'$'}launcher_id.desktop"
+          ln -sfn "/usr/local/share/applications/${'$'}launcher_id.desktop" "${'$'}desktop_link"
         }
         create_trusted_launcher tuxspan-firefox Firefox '$browserCommand' '$browserIcon' "${'$'}HOME/Desktop/Firefox.desktop"
         create_trusted_launcher tuxspan-writer Writer 'libreoffice --norestore --writer' libreoffice-writer "${'$'}HOME/Desktop/Writer.desktop"
@@ -1072,12 +1078,14 @@ object WorkspaceScripts {
         creator_dir="${'$'}HOME/Desktop/Creator Tools"
         launcher_dir="${'$'}HOME/.local/share/applications"
         mkdir -p "${'$'}creator_dir" "${'$'}launcher_dir"
+        sudo -n install -d -m 755 /usr/local/share/applications
         create_pack_launcher() {
           launcher_id="${'$'}1"; launcher_name="${'$'}2"; launcher_exec="${'$'}3"; launcher_icon="${'$'}4"; desktop_link="${'$'}5"
           launcher_path="${'$'}launcher_dir/${'$'}launcher_id.desktop"
           printf '%s\n' '[Desktop Entry]' 'Version=1.0' 'Type=Application' "Name=${'$'}launcher_name" "Exec=${'$'}launcher_exec" "Icon=${'$'}launcher_icon" 'Terminal=false' > "${'$'}launcher_path"
           chmod 644 "${'$'}launcher_path"
-          ln -sfn "${'$'}launcher_path" "${'$'}desktop_link"
+          sudo -n install -m 644 "${'$'}launcher_path" "/usr/local/share/applications/${'$'}launcher_id.desktop"
+          ln -sfn "/usr/local/share/applications/${'$'}launcher_id.desktop" "${'$'}desktop_link"
         }
         create_pack_launcher tuxspan-creator-gimp GIMP gimp gimp "${'$'}creator_dir/GIMP.desktop"
         create_pack_launcher tuxspan-creator-inkscape Inkscape inkscape org.inkscape.Inkscape "${'$'}creator_dir/Inkscape.desktop"
@@ -1090,12 +1098,14 @@ object WorkspaceScripts {
         developer_dir="${'$'}HOME/Desktop/Developer Tools"
         launcher_dir="${'$'}HOME/.local/share/applications"
         mkdir -p "${'$'}developer_dir" "${'$'}launcher_dir"
+        sudo -n install -d -m 755 /usr/local/share/applications
         create_pack_launcher() {
           launcher_id="${'$'}1"; launcher_name="${'$'}2"; launcher_exec="${'$'}3"; launcher_icon="${'$'}4"; desktop_link="${'$'}5"
           launcher_path="${'$'}launcher_dir/${'$'}launcher_id.desktop"
           printf '%s\n' '[Desktop Entry]' 'Version=1.0' 'Type=Application' "Name=${'$'}launcher_name" "Exec=${'$'}launcher_exec" "Icon=${'$'}launcher_icon" 'Terminal=false' > "${'$'}launcher_path"
           chmod 644 "${'$'}launcher_path"
-          ln -sfn "${'$'}launcher_path" "${'$'}desktop_link"
+          sudo -n install -m 644 "${'$'}launcher_path" "/usr/local/share/applications/${'$'}launcher_id.desktop"
+          ln -sfn "/usr/local/share/applications/${'$'}launcher_id.desktop" "${'$'}desktop_link"
         }
         create_pack_launcher tuxspan-developer-geany Geany geany geany "${'$'}developer_dir/Geany.desktop"
         create_pack_launcher tuxspan-developer-sqlite 'DB Browser for SQLite' sqlitebrowser sqlitebrowser "${'$'}developer_dir/DB-Browser.desktop"

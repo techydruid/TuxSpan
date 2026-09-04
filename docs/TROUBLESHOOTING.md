@@ -57,6 +57,16 @@ Open **TuxSpan > Settings > Input** and turn off **Show desktop controls**, then
 - Disconnect any physical keyboard Android still considers active.
 - Tap the text field again after changing touch mode.
 
+## Floating keyboard appears while typing on a physical keyboard
+
+Update TuxSpan to 0.22.1 or newer and restart the workspace from TuxSpan. The launch profile disables Termux:X11's hardware scancode workaround so physical typing is handled before the Android keyboard app. It also keeps Termux:X11's **Show IME with external keyboard** option off. Android-wide keyboard preferences are not changed.
+
+With no physical keyboard connected, Android Back still shows or hides the software keyboard. If a particular keyboard needs the scancode workaround, it can be tested in Termux:X11's preferences, but enabling it can restore the Android keyboard popup on some devices.
+
+## Untrusted Terminal shortcut or launcher timeout
+
+Update to 0.22.1 or newer and restart the workspace. TuxSpan recreates its starter shortcuts pointing to the standard application directory. This avoids the confirmation dialog that could keep a desktop launch request waiting until it timed out. Do not disable XFCE's security checks for arbitrary downloaded launchers.
+
 ## Android Downloads is missing
 
 The bridge appears as `~/Android-Downloads` only after Android grants Termux storage access.

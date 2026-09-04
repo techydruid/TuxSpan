@@ -1,5 +1,19 @@
 # Verification record
 
+## 0.22.1 — 2026-09-04
+
+- `testDebugUnitTest assembleRelease lintRelease` succeeded. JVM results: 36 tests, 35 passed and one skipped because Windows has no Bash. Android lint: zero errors and one existing `SdCardPath` warning. The exported Canvas/Studio account, launch, stop, Downloads-launch and desktop-profile scripts passed `bash -n` inside real Termux.
+- Production APK: `dev.tuxspan.mobile`, version `0.22.1`, versionCode `62`, minimum SDK `26`, target SDK `37`, not debuggable. Signature verified against the unchanged production certificate `4764899DEC5E840DF9A8E814DD09732255E7B312129990DEA164B4C0329C6D6C`.
+- Updated the connected phone in place from 0.22.0 without clearing TuxSpan or Termux data. Tested against the official Termux:X11 build `1.03.01-6d3c688-27.08.26` with an external alphabetic Bluetooth keyboard and a Bluetooth mouse connected.
+- Reproduced the floating-keyboard bug using Android key events injected with the connected keyboard's device ID, source and scancodes. With `hardwareKbdScancodesWorkaround=true`, the text reached the Linux terminal but Gboard appeared (`mInputShown=true`). With the setting disabled, text, Shift, Backspace, cursor movement and Ctrl+C worked without Gboard appearing (`mInputShown=false`). These are hardware-source injection tests, not a physical Bluetooth radio/typing test.
+- Briefly disconnected only the keyboard, leaving the mouse connected. Android Back successfully opened the software keyboard. After the keyboard reconnected, repeated hardware-source typing and Ctrl+C checks kept the software keyboard hidden. Automatic software-keyboard appearance on text-field focus was not verified in this run; it is separate from the physical-keyboard fix.
+- Restarted Canvas through TuxSpan and verified the direct-key handling preference, external-keyboard IME suppression and normal desktop startup persisted. Android's global `show_ime_with_hard_keyboard` setting was left unchanged. Restored the original trackpad touch mode after direct-touch UI testing.
+- Observed an untrusted-launcher dialog and a subsequent Terminal desktop-shortcut timeout. The installed Terminal itself worked from the dock. Changing only executable permissions did not resolve XFCE's trust check.
+- After installing the corrected build and restarting the desktop, opened the Terminal desktop shortcut, closed it and reopened it successfully without a trust prompt. Opened Photos from its desktop shortcut successfully too. Read-only checks confirmed Terminal, Photos and Firefox shortcuts resolve to their generated files under `/usr/local/share/applications`; no blanket launcher-security bypass was applied.
+- Confirmed the existing Canvas normal-user sudo setup and installed VLC remained available. No Linux workspace or personal data was removed. The public release is rebuilt from its source commit; the attached `SHA256SUMS.txt` identifies the final download.
+
+Verification covers the reported keyboard popup and starter-shortcut launch failure on the connected Canvas desktop, not every keyboard layout, Android keyboard app or Linux application. Full Studio/Spark runtime and creator/developer pack installations were not repeated for this patch.
+
 ## 0.22.0 — 2026-09-04
 
 - `testDebugUnitTest assembleRelease lintRelease` succeeded. JVM results: 36 tests, 35 passed, one skipped because this Windows host has no Bash. The exported real Bash regression suite then passed in Termux, including success/failure propagation, exit code 100, automatic prompt return, and syntax of all three installation recipes. The generated desktop account, launch, stop and profile scripts also passed shell syntax checks.
