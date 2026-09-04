@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.1 — 2026-09-04
+
+- Keep existing package configuration files without prompting, including the locate configuration used to exclude Android storage from indexing.
+- Resume unfinished Debian/Ubuntu package configuration when retrying setup, preserving the existing workspace.
+- Return foreground installations to the normal Termux command line automatically, with a clear completion or failure message and no Enter-key step.
+- Preserve the real installer exit code and show the package-manager error in TuxSpan when setup fails.
+- Track manual setup through the same progress and completion records as in-app setup.
+
 ## 0.21.0 — 2026-09-04
 
 - Replace the premature Canvas home card with a first-run connection checklist, then let the user choose a workspace only after Termux is ready.

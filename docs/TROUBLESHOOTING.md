@@ -14,6 +14,14 @@ Do not delete an Android user/profile to solve this problem. Do not uninstall Te
 
 Starting with 0.21.0, newly built development APKs use `dev.tuxspan.mobile.debug` and the label **TuxSpan Dev**. Public releases keep `dev.tuxspan.mobile` and the dedicated production signing certificate. Production updates are installed over the existing production app without uninstalling it.
 
+## Setup stops with code 100
+
+Code 100 means the APT package operation failed; it is not a successful completion code. Read the package error above it. Pressing Enter at an older Termux “Process completed” screen only dismisses that finished session; it does not finish the installation.
+
+Before 0.21.1, a `plocate` configuration-file question about `/etc/updatedb.conf` could fail with `end of file on stdin at conffile prompt`. Update TuxSpan and tap **Run setup again**. The installer now keeps existing configuration files automatically and resumes unfinished package configuration. Do not reset or remove the workspace.
+
+Version 0.21.1 and later print a clear success or failure message and return to the normal Termux prompt without waiting for a key. TuxSpan automatically records completion, including for the manual setup command. Other package errors (for example, network or storage failures) still require fixing their actual cause; they are not treated as successful installs.
+
 ## Setup finishes but Verify says not ready
 
 1. Return to Termux and confirm that the setup command has actually reached its completion message.

@@ -41,7 +41,9 @@ Termux and its plugins must come from compatible signing sources. Do not mix an 
 9. Select **Canvas**, **Studio**, or **Spark**, open its review screen, and inspect the generated setup recipe.
 10. Tap **Run reviewed setup**. TuxSpan opens Termux automatically, where the real package download and installation output remains visible.
 11. Keep Termux running. You can return to TuxSpan at any time to see the current milestone and an advancing estimated percentage. The estimate may move more slowly while Android configures a large package, so Termux remains the source of the exact live output. Tap **View live installation in Termux** to return to it.
-12. Do not force-stop either app or change networks during the download. When the workspace is ready, launch it from **Home**.
+12. Do not force-stop either app or change networks during the download. When setup finishes, Termux prints a completion message and returns to its normal command prompt automatically. No Enter-key step is needed. TuxSpan records the workspace as ready; return to **Home** and launch it.
+
+If setup fails, Termux still returns to the command prompt, but the message says it did not complete. TuxSpan shows the installer error instead of marking it ready. Use **Run setup again** to resume; existing workspace files are kept.
 
 The first desktop launch may take longer than later launches. Canvas and Studio open in landscape by default.
 

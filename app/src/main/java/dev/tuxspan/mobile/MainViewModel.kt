@@ -568,7 +568,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 tag = TAG_INSTALL,
                 label = "Build TuxSpan ${recipe.name}",
                 description = "Installs the reviewed ${recipe.distroLabel} recipe.",
-                script = WorkspaceScripts.trackedInstall(recipe),
+                script = WorkspaceScripts.foregroundInstall(recipe),
                 background = false,
                 // Package output can be very large. The durable progress/status
                 // files are polled separately, avoiding a large Binder callback.

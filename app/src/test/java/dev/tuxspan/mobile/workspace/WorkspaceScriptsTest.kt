@@ -123,7 +123,7 @@ class WorkspaceScriptsTest {
         assertTrue(profile.contains("create_trusted_launcher tuxspan-firefox Firefox 'firefox' 'firefox'"))
         assertTrue(profile.contains("default-web-browser 'firefox.desktop'"))
         assertTrue(profile.contains("https://packages.mozilla.org/apt mozilla main"))
-        assertTrue(profile.contains("apt-get install -y firefox"))
+        assertTrue(profile.contains("apt-get -o Dpkg::Options::=--force-confold install -y firefox"))
         assertTrue(profile.contains("/usr/lib/firefox"))
         assertTrue(profile.contains("tuxspan.cfg"))
         assertTrue(profile.contains("rm -f \"${'$'}HOME/Desktop/Web.desktop\""))
@@ -259,7 +259,7 @@ class WorkspaceScriptsTest {
         val encoded = command.substringAfter("printf '%s' '").substringBefore("'")
         val decoded = String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8)
 
-        assertEquals(WorkspaceScripts.install(WorkspaceCatalog.canvas), decoded)
+        assertEquals(WorkspaceScripts.trackedInstall(WorkspaceCatalog.canvas), decoded)
         assertTrue(command.endsWith("| base64 -d | bash"))
         assertFalse(command.contains('\n'))
     }
@@ -313,6 +313,35 @@ class WorkspaceScriptsTest {
         assertTrue(script.contains("exit_code=${'$'}{PIPESTATUS[0]}"))
         assertFalse(script.contains("here-document"))
         assertFalse(script.contains("TUXSPAN_LAUNCHER"))
+    }
+
+    @Test
+    fun desktopSetupKeepsConffilesAndResumesInterruptedDpkgWithoutPrompts() {
+        listOf(WorkspaceCatalog.canvas, WorkspaceCatalog.studio).forEach { recipe ->
+            val script = WorkspaceScripts.install(recipe)
+            assertTrue(script.contains("if [ ! -f /etc/updatedb.conf ]; then"))
+            assertTrue(script.contains("dpkg --force-confold --configure -a"))
+            assertTrue(script.contains("install -y --no-remove --fix-broken"))
+            assertFalse(script.contains("--force-confnew"))
+            assertFalse(script.contains("proot-distro reset"))
+            assertFalse(script.contains("proot-distro remove"))
+            listOf(script, WorkspaceScripts.installBundle(recipe, "starter")).forEach { setup ->
+                setup.lineSequence().filter { it.contains("apt-get ") && it.contains("install -y") }
+                    .forEach { assertTrue(it.contains("Dpkg::Options::=--force-confold")) }
+            }
+        }
+    }
+
+    @Test
+    fun foregroundSetupReturnsToInteractiveShellWithoutSwallowingErrors() {
+        val script = WorkspaceScripts.foregroundInstall(WorkspaceCatalog.canvas)
+        assertTrue(script.contains("if [ -t 0 ] && [ -t 1 ]; then"))
+        assertTrue(script.contains("exec /data/data/com.termux/files/usr/bin/bash -i"))
+        assertTrue(script.contains("exit \"${'$'}setup_exit_code\""))
+        assertTrue(script.contains("canvas.exit-code"))
+        assertTrue(script.contains("setup completed successfully"))
+        assertTrue(script.contains("setup did not complete (code %s)"))
+        assertFalse(script.lineSequence().any { it.trimStart().startsWith("read ") })
     }
 
     @Test

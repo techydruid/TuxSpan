@@ -24,8 +24,8 @@ android {
         applicationId = "dev.tuxspan.mobile"
         minSdk = 26
         targetSdk = 37
-        versionCode = 59
-        versionName = "0.21.0"
+        versionCode = 60
+        versionName = "0.21.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

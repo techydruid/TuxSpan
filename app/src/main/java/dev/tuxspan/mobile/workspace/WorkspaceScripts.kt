@@ -45,6 +45,18 @@ object WorkspaceScripts {
             "openjdk-17-jdk-headless golang-go rustc cargo " +
             "sqlite3 sqlitebrowser jq shellcheck openssh-client geany meld"
 
+    // DEBIAN_FRONTEND and -y do not answer dpkg's conffile questions. Keep
+    // existing configuration (including updatedb's Android-storage exclusions).
+    private const val APT_INSTALL = "apt-get -o Dpkg::Options::=--force-confold install -y"
+
+    private fun resumeDebianPackages(): String = """
+        export DEBIAN_FRONTEND=noninteractive
+        dpkg --force-confold --configure -a || {
+          apt-get update
+          $APT_INSTALL --no-remove --fix-broken
+        }
+    """.trimIndent()
+
     fun workspaceName(recipe: WorkspaceRecipe): String = "tuxspan-${recipe.id}"
 
     fun install(recipe: WorkspaceRecipe): String {
@@ -60,8 +72,8 @@ object WorkspaceScripts {
         val hostDesktopSetup = if (recipe.kind == WorkspaceKind.DESKTOP) {
             """
                 tuxspan_progress 30 4 $totalSteps 'Installing display support' 'Preparing Termux:X11 and audio packages.'
-                pkg install -y x11-repo
-                pkg install -y termux-x11-nightly pulseaudio
+                pkg install -y -o Dpkg::Options::=--force-confold x11-repo
+                pkg install -y -o Dpkg::Options::=--force-confold termux-x11-nightly pulseaudio
             """.trimIndent()
         } else {
             ""
@@ -73,6 +85,7 @@ object WorkspaceScripts {
 
         return """
             set -eu
+            export DEBIAN_FRONTEND=noninteractive
             tuxspan_proot_tmp="${'$'}HOME/.local/state/tuxspan/proot-tmp"
             mkdir -p "${'$'}tuxspan_proot_tmp"
             chmod 700 "${'$'}tuxspan_proot_tmp"
@@ -123,7 +136,7 @@ object WorkspaceScripts {
             tuxspan_progress 12 2 $totalSteps 'Updating Termux' 'Refreshing package information.'
             pkg update -y
             tuxspan_progress 22 3 $totalSteps 'Installing Linux tools' 'Preparing the container manager.'
-            pkg install -y proot-distro
+            pkg install -y -o Dpkg::Options::=--force-confold proot-distro
             $hostDesktopSetup
             tuxspan_progress 42 $filesystemStep $totalSteps 'Creating Linux filesystem' 'Downloading or checking the ${recipe.image} image.'
             if proot-distro login --env "PROOT_TMP_DIR=${'$'}tuxspan_proot_tmp" '$name' -- /bin/true >/dev/null 2>&1; then
@@ -144,7 +157,7 @@ object WorkspaceScripts {
             printf 'stopped\n' > "${'$'}HOME/.local/state/tuxspan/${recipe.id}.session"
             rm -f "${'$'}HOME/.local/state/tuxspan/${recipe.id}-launch.pid"
             : > "${'$'}HOME/.local/state/tuxspan/${recipe.id}-launch.log"
-            printf '\n%s is ready. Return to TuxSpan and tap Verify.\n' '${recipe.name}'
+            printf '\n%s workspace files are installed.\n' '${recipe.name}'
         """.trimIndent()
     }
 
@@ -163,7 +176,9 @@ object WorkspaceScripts {
     }
 
     /** Streams the reviewed install to Termux while retaining the same output for diagnostics. */
-    fun trackedInstall(recipe: WorkspaceRecipe): String {
+    fun trackedInstall(recipe: WorkspaceRecipe): String = trackedInstall(recipe, install(recipe))
+
+    internal fun trackedInstall(recipe: WorkspaceRecipe, installScript: String): String {
         val stateDir = "${'$'}HOME/.local/state/tuxspan"
         val statusFile = "${'$'}state_dir/${recipe.id}.status"
         val logFile = "${'$'}state_dir/${recipe.id}.log"
@@ -182,21 +197,45 @@ object WorkspaceScripts {
             appendLine(": > \"${'$'}log_file\"")
             appendLine("set +e")
             appendLine("(")
-            appendLine(install(recipe))
+            appendLine(installScript)
             appendLine(") 2>&1 | tee -a \"${'$'}log_file\"")
             appendLine("exit_code=${'$'}{PIPESTATUS[0]}")
+            appendLine("printf '%s\\n' \"${'$'}exit_code\" > \"${'$'}state_dir/${recipe.id}.exit-code\"")
             appendLine("if [ \"${'$'}exit_code\" -eq 0 ]; then")
             appendLine("  printf 'ready\\n' > \"${'$'}status_file\"")
             appendLine("  printf 'READY|100|$totalSteps|$totalSteps|Setup complete|The workspace is ready to launch.\\n' > \"${'$'}progress_file\"")
-            appendLine("  printf 'TUXSPAN_INSTALL_READY'")
+            appendLine("  printf '\\n${recipe.name} setup completed successfully.\\nReturn to TuxSpan and tap Launch ${recipe.name}.\\n'")
+            appendLine("  printf 'TUXSPAN_INSTALL_READY\\n'")
             appendLine("else")
             appendLine("  printf 'failed\\n' > \"${'$'}status_file\"")
-            appendLine("  printf 'FAILED|-1|0|$totalSteps|Setup needs attention|Open the setup details and retry; existing files are preserved.\\n' > \"${'$'}progress_file\"")
+            appendLine("  failure_detail=${'$'}(grep -E '^(E:|dpkg: error|ERROR:|Error:)' \"${'$'}log_file\" | tail -n 1 | tr '|\\r\\n' '   ' | cut -c 1-220)")
+            appendLine("  failure_detail=\"${'$'}{failure_detail:-See the last log lines in Termux.}\"")
+            appendLine("  printf 'FAILED|-1|0|$totalSteps|Setup needs attention|Setup stopped (code %s). %s Retry setup to resume; existing files are preserved.\\n' \"${'$'}exit_code\" \"${'$'}failure_detail\" > \"${'$'}progress_file\"")
+            appendLine("  printf '\\n${recipe.name} setup did not complete (code %s).\\nRetry setup in TuxSpan to resume. Your workspace files are preserved.\\n' \"${'$'}exit_code\" >&2")
             appendLine("  printf 'Setup failed. Last log lines:\\n' >&2")
             appendLine("  tail -n 30 \"${'$'}log_file\" >&2 || true")
             appendLine("  exit \"${'$'}exit_code\"")
             appendLine("fi")
         }.trimEnd()
+    }
+
+    fun foregroundInstall(recipe: WorkspaceRecipe): String =
+        returnToTermuxPrompt(trackedInstall(recipe))
+
+    /** Keep a foreground RUN_COMMAND terminal alive after recording the real result. */
+    internal fun returnToTermuxPrompt(script: String): String = buildString {
+        appendLine("set +e")
+        // Do not use `if (script)`: Bash would disable the install's errexit.
+        appendLine("(")
+        appendLine(script)
+        appendLine(")")
+        appendLine("setup_exit_code=${'$'}?")
+        appendLine("if [ -t 0 ] && [ -t 1 ]; then")
+        appendLine("  printf '\\nBack at the Termux command line. No key press is needed.\\n'")
+        appendLine("  exec /data/data/com.termux/files/usr/bin/bash -i")
+        appendLine("fi")
+        // Non-terminal callers still receive the actual failure code, and never hang.
+        append("exit \"${'$'}setup_exit_code\"")
     }
 
     fun installProgress(recipe: WorkspaceRecipe): String {
@@ -255,7 +294,7 @@ object WorkspaceScripts {
     /** A one-line, paste-safe fallback for Android builds that block foreground RUN_COMMAND sessions. */
     fun manualInstallCommand(recipe: WorkspaceRecipe): String {
         val encoded = Base64.getEncoder().encodeToString(
-            install(recipe).toByteArray(StandardCharsets.UTF_8),
+            trackedInstall(recipe).toByteArray(StandardCharsets.UTF_8),
         )
         return "printf '%s' '$encoded' | base64 -d | bash"
     }
@@ -929,10 +968,10 @@ object WorkspaceScripts {
             "apk update; apk add $packages"
         } else {
             buildString {
-                appendLine("export DEBIAN_FRONTEND=noninteractive")
+                appendLine(resumeDebianPackages())
                 if (bundleId == "starter") appendLine(browserRepositorySetup(recipe))
                 appendLine("apt-get update")
-                append("apt-get install -y $packages")
+                append("$APT_INSTALL $packages")
             }
         }
         val desktopSetup = if (recipe.kind == WorkspaceKind.DESKTOP) {
@@ -1059,15 +1098,18 @@ object WorkspaceScripts {
             export DEBIAN_FRONTEND=noninteractive
             # PRoot exposes Android storage as guest paths. Prevent locate's
             # first-run indexer from walking phone storage during package setup.
-            printf '%s\n' \
+            if [ ! -f /etc/updatedb.conf ]; then
+              printf '%s\n' \
               'PRUNE_BIND_MOUNTS="yes"' \
               'PRUNEPATHS="/data /dev /media /mnt /proc /sdcard /storage /sys /tmp /var/spool"' \
-              > /etc/updatedb.conf
+                > /etc/updatedb.conf
+            fi
+            ${resumeDebianPackages()}
             apt-get update
-            apt-get install -y ca-certificates
+            $APT_INSTALL ca-certificates
             $browserRepositorySetup
             apt-get update
-            apt-get install -y ${recipe.desktopPackage} xfce4-terminal dbus-x11 x11-utils $browserPackage git python3 ca-certificates $DESKTOP_STARTER_PACKAGES
+            $APT_INSTALL ${recipe.desktopPackage} xfce4-terminal dbus-x11 x11-utils $browserPackage git python3 ca-certificates $DESKTOP_STARTER_PACKAGES
             mkdir -p /root/.config/xfce4
             printf 'TuxSpan guest packages installed.\n'
         """.trimIndent()
@@ -1181,10 +1223,10 @@ object WorkspaceScripts {
             rm -f "${'$'}HOME/Desktop/Web.desktop" /usr/local/share/applications/tuxspan-web.desktop
             if ! command -v firefox >/dev/null 2>&1; then
               export DEBIAN_FRONTEND=noninteractive
-              dpkg --configure -a >/tmp/tuxspan-firefox-migration.log 2>&1 || true
+              dpkg --force-confold --configure -a >/tmp/tuxspan-firefox-migration.log 2>&1 || true
               ${browserRepositorySetup(recipe)}
               apt-get update >>/tmp/tuxspan-firefox-migration.log 2>&1 && \
-                apt-get install -y firefox >>/tmp/tuxspan-firefox-migration.log 2>&1
+                $APT_INSTALL firefox >>/tmp/tuxspan-firefox-migration.log 2>&1
             fi
             """.trimIndent()
         }
@@ -1214,7 +1256,7 @@ object WorkspaceScripts {
             if ! command -v xarchiver >/dev/null 2>&1; then
               export DEBIAN_FRONTEND=noninteractive
               apt-get update >/tmp/tuxspan-archive-migration.log 2>&1 && \
-                apt-get install -y xarchiver >>/tmp/tuxspan-archive-migration.log 2>&1
+                $APT_INSTALL xarchiver >>/tmp/tuxspan-archive-migration.log 2>&1
             fi
         """.trimIndent()
         return """
@@ -1417,7 +1459,7 @@ object WorkspaceScripts {
             (
               if ! python3 -c 'import pyatspi' >/dev/null 2>&1; then
                 export DEBIAN_FRONTEND=noninteractive
-                apt-get install -y at-spi2-core python3-pyatspi
+                $APT_INSTALL at-spi2-core python3-pyatspi
               fi
               exec env NO_AT_BRIDGE=0 python3 "${'$'}auto_keyboard_watcher"
             ) >/tmp/tuxspan-auto-keyboard.log 2>&1 &
